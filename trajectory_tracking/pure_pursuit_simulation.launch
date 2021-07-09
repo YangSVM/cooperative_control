@@ -1,0 +1,7 @@
+<launch>
+  <param name="roadmap_path" value="$(find gnss_gpchc_driver)/map/roadMap_lzjSouth1.txt" />
+
+  <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
+
+  <node pkg="trajectory_tracking" name="pub_road_points" type="pub_road_points.py"> </node>
+</launch>

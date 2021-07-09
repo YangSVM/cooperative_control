@@ -1,0 +1,5 @@
+rostopic pub -r 60 /control_cmd std_msgs/Int16MultiArray "
+layout: 
+  dim: []
+  data_offset: 0
+data: [0, 500, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0]"

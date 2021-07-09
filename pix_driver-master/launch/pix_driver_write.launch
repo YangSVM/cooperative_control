@@ -1,0 +1,9 @@
+<launch>
+  <param name="dbc_path" value="$(find pix_driver)/src/self_driving.dbc" />
+  <arg name="can_type" default="socketcan" />
+  <arg name="can_channel" default="can0" />
+  <param name="can_type" value="$(arg can_type)" />
+  <param name="can_channel" value="$(arg can_channel)" />
+  <node pkg="pix_driver" name="bus_message_generator" type="canbus_talker.py"> </node>
+
+</launch>
