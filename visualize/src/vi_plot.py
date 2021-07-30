@@ -13,8 +13,8 @@ from math import pi
 from geometry_msgs.msg import Pose
 
 # 全局定义参数：总车辆数目
-n_car = 2
-id_list = [2,5]
+n_car = 1
+id_list = [5]
 
 # 全局变量。
 preview_point = Point(0,0,0)
@@ -129,14 +129,7 @@ def visual():
 
     rate = rospy.Rate(10)
     origin_shift = [-85, -7]
-    ob = np.array([
-                   [5,2.5],
-                   [5,-2.5],
-                   [25,2.5],
-                   [25,-2.5],
-                   [25,5]
-                   ])
-    ob = ob + origin_shift
+
     wp_x = [0.0, 0.0, 0.0,  15.5, 15.499999999999998, 20.0, 40.0, 40.0, 40.0]
     wp_y = [0, -6.5, -3.8, 7.598076211353316, 2.401923788646685, 5.0, 8.0, 2.0, 5.0]
     wp_x = np.array(wp_x) +origin_shift[0]
@@ -149,18 +142,18 @@ def visual():
         plt.cla()
         # plt.plot(map[:,2], map[:, 1], 'k--')
         # plot_scene_wp([], [], ob)
-        for i_ob in ob:
-            theta = np.linspace(0, 2*pi, 200)
-            x = i_ob[0] + 0.5*1 * np.cos(theta)
-            y = i_ob[1] + 0.5*1 * np.sin(theta)
-            # plt.plot(x, y, 'k-') # TODO
+        # for i_ob in ob:
+        #     theta = np.linspace(0, 2*pi, 200)
+        #     x = i_ob[0] + 0.5*1 * np.cos(theta)
+        #     y = i_ob[1] + 0.5*1 * np.sin(theta)
+        #     # plt.plot(x, y, 'k-') # TODO
 
-        for i_wp in range(n_wp):
-            plt.plot(wp_x[i_wp], wp_y[i_wp], 'r*')
+        # for i_wp in range(n_wp):
+        #     plt.plot(wp_x[i_wp], wp_y[i_wp], 'r*')
 
-        if is_wp_ready:
-            path = get_path_xy(wp)
-            plt.plot(path[:,0], path[:,1], 'r*')
+        # if is_wp_ready:
+        #     path = get_path_xy(wp)
+        #     plt.plot(path[:,0], path[:,1], 'r*')
 
         for i in range(n_car):
             id = id_list[i]
@@ -182,6 +175,8 @@ def visual():
                 plt.plot(path[:,0], path[:,1], 'k-')
 
         # plt.show()
+        plt.gca().set_aspect('equal', adjustable='box')
+
         plt.pause(0.001)
 
         rate.sleep()

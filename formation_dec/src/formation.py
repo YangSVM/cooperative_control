@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Author: Shi gongchen, Yang yibin
+Author: Shi Gongchen, Yang Yibin
 在右手系中完成
 """
 

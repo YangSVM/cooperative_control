@@ -1,6 +1,10 @@
 """
-formation collection
+formation collection.
 
+返回numpy数组。(n,2) 每一行代表一个点，每行第一个值代表x,第二个值代表y
+
+待开发新功能:
+    车头朝向
 """
 
 import matplotlib.pyplot as plt
@@ -21,7 +25,9 @@ def formation_stagger(n_car,f_p, N_l=3, L_s=3.5, L_w=3):
         YI=f_p[1]-(yi-1)*L_w
         target_x.append(XI)
         target_y.append(YI)
-    return target_x, target_y
+
+    res = np.array([target_x, target_y]).T
+    return res
 
 
 # 相对坐标
@@ -41,34 +47,45 @@ def formation_capture(target_position,car_num,r):
     for i in range(car_num):
         target_x.append(target_position[0]+r*math.cos(i*theta))
         target_y.append(target_position[1]+r*math.sin(i*theta))
-    return target_x,target_y
+    
+    res = np.array([target_x, target_y]).T
+    return res
 
 
 # 直线队形的位置生成，输入为中心点坐标，直线与x轴夹角(范围-90-90)，车数，前后车间距
-def formation_line(target_position,theta,car_num,l_s):
+def formation_line(center_position, theta, n_car, d_car):
     target_x, target_y=[],[]
     theta=theta*pi/180
-    if car_num%2==0:
-        for i in range(car_num):
-            target_x.append(target_position[0]+((car_num-1)/2-i)*l_s*math.cos(theta))
-            target_y.append(target_position[1]+((car_num-1)/2-i)*l_s*math.sin(theta))
+    if n_car%2==0:
+        for i in range(n_car):
+            target_x.append(center_position[0]+((n_car-1)/2-i)*d_car*math.cos(theta))
+            target_y.append(center_position[1]+((n_car-1)/2-i)*d_car*math.sin(theta))
     else:
-        for i in range(car_num):
-            target_x.append(target_position[0] + (car_num // 2 - i) * l_s * math.cos(theta))
-            target_y.append(target_position[1] + (car_num // 2 - i) * l_s * math.sin(theta))
-    return target_x,target_y
+        for i in range(n_car):
+            target_x.append(center_position[0] + (n_car // 2 - i) * d_car * math.cos(theta))
+            target_y.append(center_position[1] + (n_car // 2 - i) * d_car * math.sin(theta))
+    res = np.array([target_x, target_y]).T
+    return res
 
 
-# 三角队形。正三角形三个顶点为A,B,C,位于输出列表的前三个位置，center为几何中心,输入为中心点坐标,OA与x轴正向夹角，车数,外接圆半径
-# 三角队形中空。
-def formation_triangle(center,theta,car_num,r):
+
+def formation_triangle(center,theta,n_car, r):
+    '''# 三角队形。正三角形三个顶点为A,B,C,位于输出列表的前三个位置.三角队形中空。
+    Params:
+        center为几何中心,输入为中心点坐标,
+        theta: OA与x轴正向夹角，
+        n_car: 车数,
+        r: 外接圆半径
+    Return:
+        pos: np.array. [n_car, 2]
+    '''
     target_x,target_y=[],[]
     theta=theta*pi/180
     # 生成A,B,C三点坐标
     for i in range(3):
         target_x.append(center[0]+r*math.cos(theta+i*2*pi/3))
         target_y.append(center[1]+r*math.sin(theta+i*2*pi/3))
-    m,n=car_num//3-1,car_num%3 # m为三角形每条边上（不含顶点）车的数量，n为需要增加1辆车的边数（比如n=2，则在OA和OB边上各增加一辆车)
+    m,n=n_car//3-1,n_car%3 # m为三角形每条边上（不含顶点）车的数量，n为需要增加1辆车的边数（比如n=2，则在OA和OB边上各增加一辆车)
     side=[m]*3
     if n==1:
         side[0]=m+1
@@ -83,7 +100,8 @@ def formation_triangle(center,theta,car_num,r):
                     target_x.append(center[0]+(side[k]-l)*OA[0]/(side[k]+1)+(l+1)*OB[0]/(side[k]+1))
                     target_y.append(center[1]+(side[k]-l)*OA[1]/(side[k]+1)+(l+1)*OB[1]/(side[k]+1))
                 k=k+1
-    return target_x,target_y
+    res = np.array([target_x, target_y]).T
+    return res
 
 
 def test_stagger():
