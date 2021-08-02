@@ -1,0 +1,19 @@
+syntax = "proto3";
+package GPS;
+
+message GPS_msg{
+    float x = 1;
+    float y = 2;
+    float z = 3;
+    float v_x = 4;
+    float v_y = 5;
+    string Code = 6;
+}
+
+message Log{
+    string data = 1;
+}
+
+service GPS {
+  rpc  gps(GPS_msg) returns (Log) {}
+}

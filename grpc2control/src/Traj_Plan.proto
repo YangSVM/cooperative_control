@@ -1,0 +1,24 @@
+syntax = "proto3";
+package Traj_Plan;
+
+message Trajectory{
+    message RoadPoint{
+        float x = 1;
+        float y = 2;
+        float v = 3;
+        float a = 4;
+        float yaw = 5;
+        float kappa = 6;
+    }
+	string Code = 1;
+	repeated RoadPoint RoadPoints = 2;
+}
+
+message Log{
+    string data = 1;
+}
+
+service Traj_Plan {
+  // 轨迹规划 协同控制模块调用 数据收发模块转发到智能体
+  rpc  TrajPlan(Trajectory) returns (Log) {}
+}
