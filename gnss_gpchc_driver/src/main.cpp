@@ -320,8 +320,14 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 		dtmp = stringToNum<double>(temp_gpchc);
 		msg_gnssodometry.twist.twist.linear.y = dtmp;
 
-		// add sth here!!!
-		
+		// 状态信号
+		temp_gpchc.assign(serial_data,separator_pos[20]+1 ,separator_pos[21]-separator_pos[20]-1);
+		dtmp = stringToNum<double>(temp_gpchc);
+		msg_gnssodometry.twist.twist.linear.z = dtmp;
+		if (abs(dtmp - 42) <1e-3){
+			ROS_ERROR_STREAM("GNSS not 42. status not stable! "); 
+		}
+
 	}
 
 	return;

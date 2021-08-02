@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 '''
+version 2.0
 修改为右手系
 '''
 import matplotlib.pyplot as plt
@@ -71,6 +72,10 @@ class PurePursuit():
         self.vel[0] = (self.gps_msg.twist.twist.linear.x)
         self.vel[1] = (self.gps_msg.twist.twist.linear.y)
 
+        gnss_status = self.gps_msg.twist.twist.linear.z
+        if abs(gnss_status - 42)<1e-5:
+            rospy.logerr('gnss states:' + str(gnss_status)+ 'gnss not 42. not steady solution. ')
+            return
         if not self.is_local_trajectory_ready:
             rospy.logwarn('waiting for local trajectory')
             return
@@ -141,11 +146,20 @@ class PurePursuit():
         index = index[0][-1]
         if min_distance > 1:
             rospy.logwarn('too far from road'+ str(min_distance))
+            
         return index, min_distance
 
     def get_preview_roadpoint(self, local_traj_xy, id_current, preview_distance, posture):
         position = posture[:2]
+        # 距离自车距离再增加1m
         distance = np.linalg.norm(local_traj_xy[id_current:, :] - position, axis=1) - preview_distance
+        # 距离自车最近点再增加1m
+        # s = np.linalg.norm(local_traj_xy[1:, :] - local_traj_xy[:-1, :], axis=1)
+        # s = np.cumsum(s)
+        
+        # distance = np.abs(s -1)
+
+
         id_preview = np.argmin(np.abs(distance))
         
         id_preview = id_preview + id_current
@@ -154,7 +168,7 @@ class PurePursuit():
         if preview_distance_error > 0.05:
             rospy.loginfo('not long enough for preview. preview the road end point instead')
 
-        return id_preview, preview_distance_error + 1
+        return id_preview, preview_distance_error + preview_distance
 
 
     def get_local_trajectory(self, msg):
