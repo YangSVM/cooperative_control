@@ -21,7 +21,7 @@ def trajCallback(msg):
     logging.basicConfig()
     with grpc.insecure_channel('localhost:50051') as channel:
         stub = pb2_grpc.Traj_PlanStub(channel)
-        trajectory = pb2.Trajectory(Code='1')
+        trajectory = pb2.Trajectory(Code='01')
         for point in msg.roadpoints:
             roadpoint = trajectory.RoadPoints.add()
             roadpoint.x = point.x
@@ -30,8 +30,8 @@ def trajCallback(msg):
             roadpoint.a = point.a
             roadpoint.yaw = point.yaw
             roadpoint.kappa = point.kappa
-        responce = stub.TrajPlan(trajectory)
-        print(responce.Log)
+        response = stub.TrajPlan(trajectory)
+        print(response.data)
 
 
 def traj_subscriber():

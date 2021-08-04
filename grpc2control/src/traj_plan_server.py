@@ -23,19 +23,18 @@ class Traj_Plan(pb2_grpc.Traj_PlanServicer):
 
         rate = rospy.Rate(10)
 
-        while not rospy.is_shutdown():
-            local_trajectory = Trajectory()
-            for point in request.RoadPoints:
-                road_point = RoadPoint()
-                road_point.x = point.x  # x
-                road_point.y = point.y  # y
-                road_point.v = point.v  # v
-                road_point.a = point.a  # a
-                road_point.yaw = point.yaw  # theta heading
-                road_point.kappa = point.kappa  # kappa
-                local_trajectory.roadpoints.append(road_point)
-            pub.publish(local_trajectory)
-            rate.sleep()
+        local_trajectory = Trajectory()
+        for point in request.RoadPoints:
+            road_point = RoadPoint()
+            road_point.x = point.x  # x
+            road_point.y = point.y  # y
+            road_point.v = point.v  # v
+            road_point.a = point.a  # a
+            road_point.yaw = point.yaw  # theta heading
+            road_point.kappa = point.kappa  # kappa
+            local_trajectory.roadpoints.append(road_point)
+        pub.publish(local_trajectory)
+        rate.sleep()
 
         return pb2.Log(data="Success")
 
