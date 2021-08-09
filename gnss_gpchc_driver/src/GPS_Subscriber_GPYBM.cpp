@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     ros::Publisher pub_gps = nh.advertise<nav_msgs::Odometry>("gps", 10);
 
     serial::Serial sp;
-    sp.setPort("/dev/ttyUSB1");
+    sp.setPort("/dev/ttyUSB0");
     sp.setBaudrate(115200);
     serial::Timeout to = serial::Timeout::simpleTimeout(100);
     sp.setTimeout(to);

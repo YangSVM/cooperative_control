@@ -16,6 +16,9 @@
 using namespace std;
 
 #define PI 3.141592653589793
+# define X0 4430489.883
+# define Y0 442634.062
+
 serial::Serial ser; 
 template <typename Type>  
 Type stringToNum(const string &str)  
@@ -76,7 +79,7 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 		int first;
 		int headerLength ; 
 		int totalCommas;
-	}gpgga,bestxyza,gptra,gpchc;   //record the locate of every comma;
+	}gpgga,bestxyza,gptra,gpchc,gpybm;   //record the locate of every comma;
 
 	gpgga.first = 6;
 	gpgga.totalCommas =14;
@@ -86,6 +89,9 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 	gptra.totalCommas = 8;
 	gpchc.first = 6;
 	gpchc.totalCommas = 13;
+	gpybm.first = 6;
+	gpybm.totalCommas = 23;
+
 
 	separator_pos.push_back(serial_data.find(",",0));	
 
@@ -97,6 +103,8 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 	ggaHeader.push_back("BESTXYZA");
 	ggaHeader.push_back("GPTRA");
 	ggaHeader.push_back("GPCHC");
+	ggaHeader.push_back("GPYBM");
+
 
 	if (strcmp(serialHeader.c_str(),ggaHeader[0].c_str()) == 0)  //GPGGA
 	{	
@@ -268,7 +276,7 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 	      msg_gnssodometry.pose.pose.orientation.w = q.w();
 		// Eigen::Matrix3d Rx = q.toRotationMatrix();
 	 //    Eigen::Vector3d ea1 = Rx.eulerAngles(2,1,0);     
-  //   	cout << ea1/PI*180 - ea0 << endl << endl;
+  		//   	cout << ea1/PI*180 - ea0 << endl << endl;
 
 	}
 	else if (strcmp(serialHeader.c_str(),ggaHeader[3].c_str()) == 0)   //GPCHC
@@ -329,6 +337,74 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 		}
 
 	}
+	else if (strcmp(serialHeader.c_str(),ggaHeader[4].c_str()) == 0){ //GPYBM
+
+		//cout<<"GPYBM"<<endl;
+		for(int i=1;i<=gpybm.totalCommas-1;i++)
+		{			
+			separator_pos.push_back(serial_data.find(",",separator_pos[i-1]+1));
+		}
+		msg_gnssodometry.header.stamp = ros::Time::now();
+		msg_gnssodometry.header.frame_id = "gpybm";
+			
+		string temp_gpybm;
+		double dtmp, lat, lon;
+
+
+		// 经纬度
+		temp_gpybm.assign(serial_data,separator_pos[2]+1 ,separator_pos[3]-separator_pos[2]-1);
+		lat = stringToNum<double>(temp_gpybm);
+		temp_gpybm.assign(serial_data,separator_pos[3]+1 ,separator_pos[4]-separator_pos[3]-1);
+		lon = stringToNum<double>(temp_gpybm);
+
+
+
+		temp_gpybm.assign(serial_data,separator_pos[11]+1 ,separator_pos[12]-separator_pos[11]-1);
+		dtmp = stringToNum<double>(temp_gpybm);
+		msg_gnssodometry.pose.pose.position.y = dtmp - X0;
+		temp_gpybm.assign(serial_data,separator_pos[12]+1 ,separator_pos[13]-separator_pos[12]-1);
+		dtmp = stringToNum<double>(temp_gpybm);
+		msg_gnssodometry.pose.pose.position.x = dtmp - Y0;
+
+		ROS_INFO_STREAM("X = " << msg_gnssodometry.pose.pose.position.x);
+		ROS_INFO_STREAM("Y = " << msg_gnssodometry.pose.pose.position.y);
+
+		// YAW
+		temp_gpybm.assign(serial_data,separator_pos[5]+1 ,separator_pos[6]-separator_pos[5]-1);
+		dtmp = stringToNum<double>(temp_gpybm);	//逆时针为正。正北为0
+		dtmp =90 - dtmp;	//逆时针为正。正东为0
+		dtmp = (dtmp<-180 )? dtmp+360 : dtmp;       //90-(0,360) -> (-180,180)
+		
+		msg_gnssodometry.twist.twist.angular.z  = dtmp;
+		ROS_INFO_STREAM("YAW = " << msg_gnssodometry.twist.twist.angular.z);
+
+		// X velocity：东向速度
+		temp_gpybm.assign(serial_data,separator_pos[8]+1 ,separator_pos[9]-separator_pos[8]-1);
+		dtmp = stringToNum<double>(temp_gpybm);
+		msg_gnssodometry.twist.twist.linear.x = dtmp;
+
+		// Y velocity：北向速度
+		temp_gpybm.assign(serial_data,separator_pos[7]+1 ,separator_pos[8]-separator_pos[7]-1);
+		dtmp = stringToNum<double>(temp_gpybm);
+		msg_gnssodometry.twist.twist.linear.y = dtmp;
+
+		// 状态信号
+		temp_gpybm.assign(serial_data,separator_pos[15]+1 ,separator_pos[16]-separator_pos[15]-1);
+		dtmp = stringToNum<double>(temp_gpybm);
+		double status=dtmp*10;
+
+		temp_gpybm.assign(serial_data,separator_pos[16]+1 ,separator_pos[17]-separator_pos[16]-1);
+		dtmp = stringToNum<double>(temp_gpybm);
+		status += dtmp;
+		msg_gnssodometry.twist.twist.linear.z = status;
+
+
+
+		if (abs(status - 44) >1e-3){
+			ROS_ERROR_STREAM("GNSS states:"<< status <<" not 42. status not stable! gnss"); 
+		}
+		ROS_INFO_STREAM("gps status = "<< status <<"\n");
+	}
 
 	return;
 }
@@ -345,7 +421,7 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 
 int main (int argc, char** argv) { 
  
-	ros::init(argc, argv, "serial_node"); 
+	ros::init(argc, argv, "serial_node", ros::init_options::AnonymousName); 
 	 
 	ros::NodeHandle nh; 
 	ros::NodeHandle param_nh("~");
@@ -370,12 +446,12 @@ int main (int argc, char** argv) {
 	// ros::Subscriber write_sub = nh.subscribe("writeToSerial", 1, writeCallback); 
 
 
-	ros::Publisher read_pub = nh.advertise<nmea_msgs::Gpgga>("gpgga", 1); 
-	ros::Publisher read_pub2 = nh.advertise<nav_msgs::Odometry>("navOdometry", 1); 	
-	ros::Publisher read_pub3 = nh.advertise<sensor_msgs::NavSatFix>("navSatFix", 1); 
-	ros::Publisher read_pub4 = nh.advertise<sensor_msgs::Imu>("imu/data", 20);	
-	ros::Publisher read_pub_raw = nh.advertise<std_msgs::String>("gpchc", 1);	
-	ros::Publisher read_pub_gps = nh.advertise<nav_msgs::Odometry>("gps", 1);	
+	// ros::Publisher read_pub = nh.advertise<nmea_msgs::Gpgga>("gpgga", 1); 
+	// ros::Publisher read_pub2 = nh.advertise<nav_msgs::Odometry>("navOdometry", 1); 	
+	// ros::Publisher read_pub3 = nh.advertise<sensor_msgs::NavSatFix>("navSatFix", 1); 
+	// ros::Publisher read_pub4 = nh.advertise<sensor_msgs::Imu>("imu/data", 20);	
+	ros::Publisher read_pub_raw = nh.advertise<std_msgs::String>("/car2/gpxxx_raw", 1);	
+	ros::Publisher read_pub_gps = nh.advertise<nav_msgs::Odometry>("/car2/gps", 1);	
 
 	//设置串口属性，并打开串口 
 	ser.setPort(port); 

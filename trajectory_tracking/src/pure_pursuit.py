@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 '''
-version 2.0
 修改为右手系
 '''
 import matplotlib.pyplot as plt
@@ -71,11 +70,10 @@ class PurePursuit():
         self.posture[2] = (self.gps_msg.twist.twist.angular.z) 
         self.vel[0] = (self.gps_msg.twist.twist.linear.x)
         self.vel[1] = (self.gps_msg.twist.twist.linear.y)
+        
+        # if abs(self.gps_msg.twist.twist.linear.z - 42)>1e-3:
+        #     return
 
-        gnss_status = self.gps_msg.twist.twist.linear.z
-        if abs(gnss_status - 42)<1e-5:
-            rospy.logerr('gnss states:' + str(gnss_status)+ 'gnss not 42. not steady solution. ')
-            return
         if not self.is_local_trajectory_ready:
             rospy.logwarn('waiting for local trajectory')
             return
@@ -99,12 +97,14 @@ class PurePursuit():
         
         # delta_y：纯追踪算法中关键量。预瞄点 距离 车质心 车身右方侧向距离。
         delta_y =  (preview_x - self.posture[0]) * np.sin(yaw * np.pi / 180) - (preview_y - self.posture[1]) * np.cos(yaw * np.pi / 180)
+        # delta_y = -(preview_x - self.posture[0]) * np.sin(yaw * np.pi / 180) +   (preview_y - self.posture[1]) * np.cos(yaw * np.pi / 180);
+
 
         # 算法公式。曲率 kappa = 2*y/ 距离平方。
         preview_curvature = 2* delta_y / (preview_distance_real**2 )
 
         # 车辆轴距为0.8。前轮转角 angle = L *kappa
-        angle = 0.8*preview_curvature*180/np.pi
+        angle = math.atan(0.8*preview_curvature)*180/np.pi
 
         if np.abs(angle) >30:
             angle = np.sign(angle) *30
@@ -116,18 +116,21 @@ class PurePursuit():
         vel_current = np.linalg.norm(self.vel)
 
         # 速度滤波
-        delta_v = 2
-        if vel_target > vel_current +delta_v:
-            vel_cmd = vel_current +delta_v
-        elif vel_target < vel_current - delta_v:
-            vel_cmd = vel_current -delta_v
-        else:
-            vel_cmd = vel_target
-        
+        # delta_v = 2
+        # if vel_target > vel_current +delta_v:
+        #     vel_cmd = vel_current +delta_v
+        # elif vel_target < vel_current - delta_v:
+        #     vel_cmd = vel_current -delta_v
+        # else:
+        #     vel_cmd = vel_target
+        vel_cmd = vel_target
         # 反向时，换倒车档
-        if vel_cmd<0:
-            vel_cmd = abs(vel_cmd)
-            self.cmd.data[3] = 3
+        # if vel_cmd<0:
+        #     vel_cmd = abs(vel_cmd)
+        #     self.cmd.data[3] = 3
+        
+        if vel_cmd ==0:
+            print('stop!')
 
         self.cmd.data[0] = int (vel_cmd*36 )
         if preview_distance_real < 0.5:
@@ -146,7 +149,6 @@ class PurePursuit():
         index = index[0][-1]
         if min_distance > 1:
             rospy.logwarn('too far from road'+ str(min_distance))
-            
         return index, min_distance
 
     def get_preview_roadpoint(self, local_traj_xy, id_current, preview_distance, posture):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 '''
 仿真的参考系用的右手系
+v2.0 输入输出画图均采用右手系
 '''
 import matplotlib.pyplot as plt
 from utils.draw_lqr import draw_car
@@ -33,12 +34,17 @@ is_local_trajectory_ready_list = [False for i in range(n_car)]
 global_trajectory_list = [Trajectory() for i in range(n_car)]
 is_global_trajectory_ready_list = [False for i in range(n_car)]
 
+wp_traj = Trajectory() 
+is_wp_ready = False
+
 class Gear(Enum):
     GEAR_DRIVE = 1
     GEAR_REVERSE = 2
 
 
 class VehicleState:
+    '''yaw 弧度制
+    '''
     def __init__(self, x=0.0, y=0.0, yaw=0.0,
                  v=0.0, gear=Gear.GEAR_DRIVE):
         self.x = x
@@ -124,9 +130,10 @@ class VehicleState:
         return v
 
     def GetGps(self):
-        self.gps_msg.pose.pose.position.x = self.y
-        self.gps_msg.pose.pose.position.y = self.x
-        self.gps_msg.twist.twist.angular.z =  (- self.yaw + np.pi/2) * 180/np.pi
+        self.gps_msg.pose.pose.position.x = self.x
+        self.gps_msg.pose.pose.position.y = self.y
+        self.gps_msg.twist.twist.angular.z =  (self.yaw)/pi*180
+
 
         self.gps_msg.twist.twist.linear.x  = self.v*math.cos(math.radians(self.yaw))
         self.gps_msg.twist.twist.linear.y  = self.v*math.sin(math.radians(self.yaw))
@@ -146,8 +153,8 @@ def vehicle_update(msg, vehicleState):
 def getPrewierPoint(msg, id):
     '''preview_point_list 已经在右手系了
     '''
-    preview_point_list[id].x = msg.y
-    preview_point_list[id].y = msg.x
+    preview_point_list[id].x = msg.x
+    preview_point_list[id].y = msg.y
     preview_point_list[id].z = msg.z
 
 
@@ -161,13 +168,18 @@ def get_global_trajectory(msg, id):
     global_trajectory_list[id] =  msg
     is_global_trajectory_ready_list[id] = True
 
-def get_path_xy(local_trajectory):
-    n_points = len(local_trajectory.roadpoints)
+def get_wp(msg):
+    global wp_traj, is_wp_ready
+    wp_traj =  msg
+    is_wp_ready = True
+
+def trajectory2np(trajectory):
+    n_points = len(trajectory.roadpoints)
 
     path = np.zeros([n_points, 2])
     for i in range(n_points):
-        path[i,0] = local_trajectory.roadpoints[i].x
-        path[i,1] = local_trajectory.roadpoints[i].y
+        path[i,0] = trajectory.roadpoints[i].x
+        path[i,1] = trajectory.roadpoints[i].y
     return path
 
 
@@ -196,13 +208,14 @@ def simulation():
     vehicle_state_origin = rospy.get_param('vehicle_state_origin', '')
 
     # state_map_origin = map[0, :]
-    state_map_origin = [0,0,0,0,0,0]
+    # x,y,yaw.右手系
+    state_map_origin = [2 ,17,-90]    
     
     rospy.loginfo("Simulation: map loaded")
 
     vehicle_state_list = []
     for i in range(n_car):
-        vehicleState = VehicleState(state_map_origin[1], state_map_origin[1]+3*i, state_map_origin[3] *np.pi /180 )
+        vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
         vehicle_state_list.append(vehicleState)
 
 
@@ -213,6 +226,7 @@ def simulation():
         rospy.Subscriber('car'+str(id)+'/purepusuit/preview_point', Point, getPrewierPoint, i)
         rospy.Subscriber('car'+str(id)+'/local_trajectory', Trajectory, get_local_trajectory, i)
         rospy.Subscriber('car'+str(id)+'/global_trajectory', Trajectory, get_global_trajectory, i)
+        rospy.Subscriber('/temp_goal', Trajectory, get_wp)
 
     # 输出GPS坐标
     state_pubs = [rospy.Publisher('car'+str(id)+'/gps', Odometry, queue_size=1) for id in id_list]
@@ -226,23 +240,20 @@ def simulation():
                 [25,14],
                 [25,11]
                 ])
-    wp_x = [0.0, 0.0, 0.0,  17.0, 14.401923788646684, 19.598076211353316, 40.0, 40.0, 40.0]
-    wp_y = [0.0, 3.0, 6.0, 9.0, 13.5, 13.5, 7.0, 13.0, 10.0]
-    n_wp = len(wp_x)
     
     while not rospy.is_shutdown():
         # plot simulation
         plt.cla()
         # plt.plot(map[:,2], map[:, 1], 'k--')
         # plot_scene_wp([], [], ob)
-        for i_ob in ob:
-            theta = np.linspace(0, 2*pi, 200)
-            x = i_ob[0] + 0.5*1 * np.cos(theta)
-            y = i_ob[1] + 0.5*1 * np.sin(theta)
-            plt.plot(x, y, 'k-')
+        # for i_ob in ob:
+        #     theta = np.linspace(0, 2*pi, 200)
+        #     x = i_ob[0] + 0.5*1 * np.cos(theta)
+        #     y = i_ob[1] + 0.5*1 * np.sin(theta)
+        #     plt.plot(x, y, 'k-')
 
-        for i_wp in range(n_wp):
-            plt.plot(wp_x[i_wp], wp_y[i_wp], 'r*')
+        # for i_wp in range(n_wp):
+        #     plt.plot(wp_x[i_wp], wp_y[i_wp], 'r*')
 
         for i in range(n_car):
             id = id_list[i]
@@ -256,11 +267,14 @@ def simulation():
                 plt.plot(previewPoint.x, previewPoint.y, 'r*')
             
             if is_local_trajectory_ready_list[i]:
-                path = get_path_xy(local_trajectory_list[i])
-                plt.plot(path[:,1], path[:,0], 'b-')
+                path = trajectory2np(local_trajectory_list[i])
+                plt.plot(path[:,0], path[:,1], 'b-')
             if is_global_trajectory_ready_list[i]:
-                path = get_path_xy(global_trajectory_list[i])
-                plt.plot(path[:,1], path[:,0], 'k-')
+                path = trajectory2np(global_trajectory_list[i])
+                plt.plot(path[:,0], path[:,1], 'k-')
+        if is_wp_ready:
+            wp_np = trajectory2np(wp_traj)
+            plt.plot(wp_np[:, 0], wp_np[:, 1], 'r*')
 
         # plt.show()
         plt.pause(0.001)

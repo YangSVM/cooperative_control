@@ -52,8 +52,9 @@ def formation_capture(target_position,car_num,r):
     return res
 
 
-# 直线队形的位置生成，输入为中心点坐标，直线与x轴夹角(范围-90-90)，车数，前后车间距
 def formation_line(center_position, theta, n_car, d_car):
+    ''' 直线队形的位置生成，输入为中心点坐标，直线与x轴夹角(范围-90-90)，车数，前后车间距
+    '''
     target_x, target_y=[],[]
     theta=theta*pi/180
     if n_car%2==0:
@@ -70,10 +71,10 @@ def formation_line(center_position, theta, n_car, d_car):
 
 
 def formation_triangle(center,theta,n_car, r):
-    '''# 三角队形。正三角形三个顶点为A,B,C,位于输出列表的前三个位置.三角队形中空。
+    '''三角队形。正三角形三个顶点为A,B,C,位于输出列表的前三个位置.三角队形中空。
     Params:
         center为几何中心,输入为中心点坐标,
-        theta: OA与x轴正向夹角，
+        theta: OA与x轴正向夹角，degree
         n_car: 车数,
         r: 外接圆半径
     Return:

@@ -13,10 +13,11 @@ from trajectory_tracking.msg import Trajectory
 
 
 def talker(roadmap_path):
-    pub = rospy.Publisher('/car5/local_trajectory', Trajectory, queue_size=1)
+    pub = rospy.Publisher('local_trajectory', Trajectory, queue_size=1)
     rate = rospy.Rate(10) # 10hz
     if len(roadmap_path) !=0:        # 有地图，加载地图文件
         data = np.loadtxt(roadmap_path, delimiter=',')
+        print(roadmap_path)
     else:                                           # 没有地图，可以自定义编辑x,y
         data = np.zeros([500,5])
         x = np.linspace(0,5,500)
@@ -31,7 +32,7 @@ def talker(roadmap_path):
         road_point = RoadPoint()
         road_point.x = data[i, 0]   # x
         road_point.y =  data[i, 1]   # y
-        road_point.v = 3   # v=1.  匀速运动，速度设为1
+        road_point.v = 1.5   # v=1.  匀速运动，速度设为1
 
         local_trajectory.roadpoints.append(road_point)
 
@@ -43,8 +44,8 @@ def talker(roadmap_path):
 
 
 if __name__ == '__main__':
-    rospy.init_node('talker', anonymous=True)
+    rospy.init_node('gnss_txt_pub', anonymous=True)
     # 默认为0，如果不输入地图，则手动生成
-    roadmap_path = rospy.get_param("/roadmap_path", 'shuangyixian2.txt')
+    roadmap_path = rospy.get_param("/roadmap_path", 'line_cricle.txt')
     talker(roadmap_path)
 

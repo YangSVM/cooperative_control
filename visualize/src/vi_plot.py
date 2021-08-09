@@ -13,8 +13,8 @@ from math import pi
 from geometry_msgs.msg import Pose
 
 # 全局定义参数：总车辆数目
-n_car = 1
-id_list = [5]
+n_car = 2
+id_list = [1,2]
 
 # 全局变量。
 preview_point = Point(0,0,0)
