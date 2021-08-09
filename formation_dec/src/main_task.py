@@ -103,25 +103,41 @@ def summon(states, formation_ros: FormationROS):
         [0, -r + r_u_turn],
         [r_u_turn, -r],
         [2*r_u_turn, -r + r_u_turn],
+        [2*r_u_turn, -r + r_u_turn + 2],
     ])
     
     global_frenet_csp = cubic_spline_planner.Spline2D(center_line[:, 0], center_line[:, 1])
-    
+    pos_formations = []
     pos_line =formation_line(center_line[0, :], 0, n_car, 2)
-    
+    pos_formations.append(pos_line)
+
+    # 三角队形匀速开始
     pos_tri = formation_triangle(center_line[1, :],- 90,n_car,  2)
-    
+    pos_formations.append(pos_tri)
+
+    # 三角队形匀速控制点
+    n_contrl = 3
+    d_dy = (center_line[2, :]- center_line[1, :])/(n_contrl + 1)
+    for i_contrl in range(n_contrl):
+        pos_constant_ = formation_triangle(center_line[1, :]+d_dy*(i_contrl+1) ,- 90,n_car,  2)
+        pos_formations.append(pos_constant_)
+
     # 匀速运动结束位置
     pos_tri_end = formation_triangle(center_line[2, :], -90,n_car,  2)
-
+    pos_formations.append(pos_tri_end)
     # 转弯中间位置
     pos_turn = formation_triangle(center_line[3, :], 0,n_car,  2)
-
+    pos_formations.append(pos_turn)
     # 结束点位置
     pos_end = formation_line(center_line[4, :], 0, n_car, 2)
+    pos_formations.append(pos_end)
 
+    pos_end_ = formation_line(center_line[5, :], 0, n_car, 2)
+    pos_formations.append(pos_end_)
+    #     
     # pos_formations: (n_formation, n_car, 2)。表示共有几个队形阶段。
-    pos_formations = np.array([pos_line, pos_tri, pos_tri_end, pos_turn, pos_end])
+    pos_formations = np.array(pos_formations)
+
     # 目标分配
     for i_stage in range(1, pos_formations.shape[0]):
         pos_formations[i_stage, :] = Assign(pos_formations[i_stage-1, :], pos_formations[i_stage, :])
@@ -134,7 +150,51 @@ def summon(states, formation_ros: FormationROS):
 
 def battle():
     '''打击！
+
     '''
+        # 设计编队集合点 。一字队形->三角队形，一字队形。
+    r = 12
+    r_u_turn = 3
+    center_line = np.array([
+        [0,r+5],
+        [0, r+5 -7],
+        [0, -r + r_u_turn],
+        [r_u_turn, -r],
+        [2*r_u_turn, -r + r_u_turn],
+        [2*r_u_turn, -r + r_u_turn + 2],
+    ])
+    
+    global_frenet_csp = cubic_spline_planner.Spline2D(center_line[:, 0], center_line[:, 1])
+    pos_formations = []
+    pos_line =formation_line(center_line[0, :], 0, n_car, 2)
+    pos_formations.append(pos_line)
+
+    # 三角队形匀速开始
+    pos_tri = formation_triangle(center_line[1, :],- 90,n_car,  2)
+    pos_formations.append(pos_tri)
+
+    # 三角队形匀速控制点
+    n_contrl = 3
+    d_dy = (center_line[2, :]- center_line[1, :])/(n_contrl + 1)
+    for i_contrl in range(n_contrl):
+        pos_constant_ = formation_triangle(center_line[1, :]+d_dy*(i_contrl+1) ,- 90,n_car,  2)
+        pos_formations.append(pos_constant_)
+
+    # 匀速运动结束位置
+    pos_tri_end = formation_triangle(center_line[2, :], -90,n_car,  2)
+    pos_formations.append(pos_tri_end)
+    # 转弯中间位置
+    pos_turn = formation_triangle(center_line[3, :], 0,n_car,  2)
+    pos_formations.append(pos_turn)
+    # 结束点位置
+    pos_end = formation_line(center_line[4, :], 0, n_car, 2)
+    pos_formations.append(pos_end)
+
+    pos_end_ = formation_line(center_line[5, :], 0, n_car, 2)
+    pos_formations.append(pos_end_)
+    #     
+    # pos_formations: (n_formation, n_car, 2)。表示共有几个队形阶段。
+    pos_formations = np.array(pos_formations)
 
 
 def pursuit():

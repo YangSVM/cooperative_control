@@ -112,8 +112,9 @@ def test_stagger():
     plt.plot(vp_x, vp_y, 'ro')
 
 
-# 将队形朝某个方向前后延伸一段距离。 theta: degree
 def extend_formation(x,y, theta):
+    # 将队形朝某个方向前后延伸一段距离。 theta: degree
+
     n_car = len(x[0])
     d_dis = 0.2
     dis = np.arange(-2,3)*d_dis
