@@ -169,7 +169,7 @@ def visual():
             
             if is_local_trajectory_ready_list[i]:
                 path = get_path_xy(local_trajectory_list[i])
-                plt.plot(path[:,0], path[:,1], 'b-')
+                plt.plot(path[:,0], path[:,1], 'g.')
             if is_global_trajectory_ready_list[i]:
                 path = get_path_xy(global_trajectory_list[i])
                 plt.plot(path[:,0], path[:,1], 'k-')

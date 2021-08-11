@@ -14,4 +14,5 @@
         roslaunch simulation simulation.launch
         ```
 4. 原理：目前使用纯追踪算法控制转角，速度按照局部轨迹中最近的点的速度发布
-
+5. 细节修改：
+   - 接收到None局部路径时，直接停车

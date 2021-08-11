@@ -1,23 +1,17 @@
 #!/usr/bin/env python3
 
 """
-Author: Shi Gongchen, Yang Yibin
 在右手系中完成
-生成全局路径，用frenet s坐标表示阶段。
+用frenet s坐标表示阶段。
 参数队形保持阶段：(新：队形保持阶段轨迹生成函数：考虑如何保证多车位置速度相差可能较大的情况下，如何趋于同速)
-队形变换阶段：(旧：匈牙利算法搭配规划函数得到。今天下午调试)
+队形变换阶段：(旧：匈牙利算法搭配规划函数得到)
 队形保持阶段
 
 
-采样方式：
-    - 横向终点位置采样(采样间距+车宽 是车能通过的最大间隙)
-    - 终点时间采样：多久能够回到中心线
-    - 终点纵向速度采样：达到终点后，车的速度是多少。
-分别对横纵向用5次、4次多项式(关于时间t)，对起点状态和末端状态列方程，可以求解该轨迹。
+采用局部路径规划中的p2p_gen.py进行路径生成
 
 """
 
-from threading import local
 import rospy
 import numpy as np
 import copy
@@ -43,7 +37,7 @@ except ImportError:
 
 # Parameter
 MAX_SPEED = 50/3.6 # maximum speed [m/s]
-MAX_ACCEL = 3.0  # maximum acceleration [m/ss]
+MAX_ACCEL = 2.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 1  # maximum curvature [1/m]
 
 D_ROAD_W = 1.0  # road width sampling length [m]
@@ -73,7 +67,7 @@ show_animation = False
 
 id_real = [2, 5]
 #队列中车辆的状态：
-FormationState = Enum('FormationState', ('running', 'temp_goal', 'goal', 'waiting'))
+FormationState = Enum('FormationState', ('transition', 'temp_goal', 'goal'))
 
 class FormationROS():
     def __init__(self, n_car) -> None:
@@ -99,10 +93,9 @@ class FormationROS():
         self.last_trajectory = None
         # 全局状态管理器：[起点，第一个队形点)为阶段0，[第一个队形点，第二个队形点)为阶段1，以此类推
         self.vehicle_formation_stage = [0 for i in range(n_car)]
-        self.vehicle_states = [FormationState.running for i in range(n_car)]
 
     def sub_gps_states(self, msg, i):
-        # rospy.loginfo('GNSS receive. Car index '+str(i))
+        rospy.loginfo('GNSS receive. Car index '+str(i))
         self.gps_flag[i] = True
         self.pose_states[i].position.x = msg.pose.pose.position.x
         self.pose_states[i].position.y = msg.pose.pose.position.y
@@ -114,7 +107,7 @@ class FormationROS():
             return self.pose_states
         else:
             rospy.logwarn('gps info not ready!')
-            print('gnss is received flag: ', self.gps_flag)
+            print(self.gps_flag)
             return None
 
     def publish(self, v_path_x, v_path_y, v_speed ):
@@ -132,9 +125,8 @@ class FormationROS():
                 traj.roadpoints.append(rp)
             self.pubs[i].publish(traj)
     
-    def pub_traj(self, trajs):
-        for i in range(len(trajs)):
-            self.pubs[i].publish(trajs[i])
+    def pub_traj(self, traj):
+        self.pubs[1].publish(traj)
 
     def publish_csps(self, trajs):
         '''在正常坐标系下规划，轨迹跟踪是左手系下的，需要转换
@@ -221,48 +213,6 @@ class QuarticPolynomial:
         return xt
 
 
-class QuarticPolynomial4LaneChange:
-
-    def __init__(self, xs,  xe, vxe, axe, time):
-        # calc coefficient of quartic polynomial
-
-        self.a0 = xs
- 
-        A = np.array([[3 * time ** 2, 2 * time, 1],
-                      [6 * time, 2 , 0],
-                      [time**3, time**2, time]])
-        b = np.array([vxe,
-                      axe,
-                      xe- self.a0])
-        x = np.linalg.solve(A, b)
-
-        self.a1 = x[2]
-        self.a2 = x[1]
-        self.a3 = x[0]
-
-    def calc_point(self, t):
-        xt = self.a0 + self.a1 * t + self.a2 * t ** 2 + \
-             self.a3 * t ** 3 
-
-        return xt
-
-    def calc_first_derivative(self, t):
-        xt = self.a1 + 2 * self.a2 * t + \
-             3 * self.a3 * t ** 2 
-
-        return xt
-
-    def calc_second_derivative(self, t):
-        xt = 2 * self.a2 + 6 * self.a3 * t 
-
-        return xt
-
-    def calc_third_derivative(self, t):
-        xt = 6 * self.a3 
-
-        return xt
-
-
 class FrenetPath:
 
     def __init__(self):
@@ -298,8 +248,7 @@ def calc_frenet_paths(c_speed, c_d, c_d_d, c_d_dd, s0):
         for Ti in np.arange(MIN_T, MIN_T+1, 1):
             fp = FrenetPath()
 
-            # lat_qp = QuinticPolynomial(c_d, c_d_d, c_d_dd, di, 0.0, 0.0, Ti)
-            lat_qp = QuarticPolynomial4LaneChange(c_d,   di, 0.0, 0.0, Ti)
+            lat_qp = QuinticPolynomial(c_d, c_d_d, c_d_dd, di, 0.0, 0.0, Ti)
             # 让s最大为终点
             fp.t = [t for t in np.arange(0.0, Ti, DT)]
             fp.d = [lat_qp.calc_point(t) for t in fp.t]
@@ -336,7 +285,7 @@ def calc_frenet_paths(c_speed, c_d, c_d_d, c_d_dd, s0):
 
 
 # 给出参考轨迹csp, 求解对应frenet坐标系下的s-d
-def cartesian2frenet(x, y, csp :cubic_spline_planner.Spline2D):
+def xy2frenet(x, y, csp :cubic_spline_planner.Spline2D):
     pos = np.array([x, y])
 
     s = np.arange(0, csp.s[-1], 0.1)
@@ -446,8 +395,6 @@ def frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob, search_par
         print('none fplist')
 
     fplist = check_paths(fplist, ob)
-    if fplist is None:
-        print('none fplist available')
     # t4 = time.time()
     # print(t3-t2, ' ', t4-t3)
     # find minimum cost path
@@ -520,9 +467,7 @@ def Assign(pos_start, pos_end):
     cost_matrix = np.zeros((n_car, n_car))  # 代价矩阵
     for i in range(n_car):
         for j in range(n_car):
-            # sq=(x_end[j]-x_start[i])**2+(y_end[j]-y_start[i])**2                # 代价为距离平方
-            # sq=abs(x_end[j]-x_start[i])+abs(y_end[j]-y_start[i])                # 代价为曼哈顿距离
-            sq=math.sqrt((x_end[j]-x_start[i])**2+(y_end[j]-y_start[i])**2)   # 代价为距离
+            sq=(x_end[j]-x_start[i])**2+(y_end[j]-y_start[i])**2                # 代价为距离平方
             cost_matrix[i, j] = sq
 
     matches_i, matches_j = linear_sum_assignment(cost_matrix)
@@ -574,8 +519,9 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
     # 局部路径，用于存放v_x, v_y, v_s（横纵坐标速度）
     local_trajs_oral = [[[],[],[]] for i in range(n_car)]           # 单车算法规划的轨迹，未考虑协作碰撞
     paths = [[] for i in range(n_car)]                                          # 当前规划的轨迹
-
-    vehicle_states = formation_ros.vehicle_states
+    # 每辆车是否都已经到达终点
+    isGoal = [False for i in range(n_car)]
+    formation_state  = [FormationState.transition for i in range(n_car)]
     last_trajectory = formation_ros.last_trajectory
 
     vehicle_formation_stage = formation_ros.vehicle_formation_stage
@@ -588,37 +534,32 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
     for i_car in range(n_car):
         csp = csps[i_car]
         t_xy = time.time()
-        s, d= cartesian2frenet(states[i_car].position.x, states[i_car].position.y, csp)
+        s, d= xy2frenet(states[i_car].position.x, states[i_car].position.y, csp)
         t_xy2 = time.time()
-        # print('转换时间：' , t_xy2 - t_xy)
-
+        print('转换时间：' , t_xy2 - t_xy)
+        # 判断是否到达终点
+        end_x = csp.sx.y[-1]
+        end_y = csp.sy.y[-1]
+        if np.hypot(states[i_car].position.x - end_x, states[i_car].position.y - end_y) <= 0.5:
+            print("Goal", np.hypot(states[i_car].position.x - end_x, states[i_car].position.y - end_y))
+            isGoal[i_car] = True
+            continue
 
         t_traj_start = time.time()
         # 判断是否到达队形点
         # 根据frenet坐标系s值判断
         for i_stage in range(pos_formations.shape[0]): 
-            if s > pos_formations_frenet[i_stage, i_car, 0] - 1e-2:
+            if s> pos_formations_frenet[i_stage, i_car, 0]:
                 vehicle_formation_stage[i_car] = i_stage
 
         i_car_stage = vehicle_formation_stage[i_car] 
-        print('car', i_car,': Stage', i_car_stage, '. Frenet sd:\t', (s, d))
-        print('last state frenet sd: \t\t', pos_formations_frenet[i_car_stage, i_car, :])
+        print('car', i_car,': Stage', i_car_stage, 's_ego_global:', s)
+        print('last state frenet xy: ', xy2frenet(pos_formations[i_car_stage, i_car, 0], pos_formations[i_car_stage, i_car, 1], csp))
         if i_car_stage+1<pos_formations.shape[0]:
-            print('Next state frenet sd: \t\t', pos_formations_frenet[i_car_stage+1, i_car, :])
+            print('Next state frenet xy: ', xy2frenet(pos_formations[i_car_stage+1, i_car, 0], pos_formations[i_car_stage+1, i_car, 1], csp))
         else:
-            # 道路末端没有预瞄点。不往前走。停住了
             print('goal reached!')
-            vehicle_states[i_car] = FormationState.goal
-            continue
 
-        # 判断是否到达终点
-        end_x = csp.sx.y[-1]
-        end_y = csp.sy.y[-1]
-        if np.hypot(states[i_car].position.x - end_x, states[i_car].position.y - end_y) <=1:
-            print("Goal!")
-            vehicle_states[i_car] = FormationState.goal
-            
-            continue
 
         isReady4Next = True
         # 如果三辆车都达到队形点，则进入过度期间继续下一阶段队形变换，否则停车等待
@@ -630,24 +571,21 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
                 # 如果自车领先他车一个阶段，自车需要先等待.
                 isReady4Next  = False
         t_traj_end = time.time()
-        # print('阶段检测时间：', t_traj_end- t_traj_start)
+        print('阶段检测时间：', t_traj_end- t_traj_start)
 
         if isReady4Next:
             # rospy.loginfo('is ready for next transition')
-            vehicle_states = [FormationState.running for i in range(n_car)]
+            formation_state = [FormationState.transition for i in range(n_car)]
         else:
             print('car', i_car,': temp goal. waiting')
-            if last_trajectory is None or len(last_trajectory[0][i_car]) ==0:
+            if last_trajectory is None:
                 rospy.logwarn('last trajectory is None')
                 continue
-            path_x, path_y, path_v = last_trajectory
+            path_x, path_y, path_v = last_trajectory 
             tmp_v = path_v[i_car][:]
             # 速度直接置为零
             path_v[i_car][:]= np.zeros(tmp_v.shape)
-            # 其余x,y等信息不变。保留第一个点
-            
-            path_x[i_car][:] = np.ones(path_x[i_car][:].shape)*path_x[i_car][0]
-            path_y[i_car][:] = np.ones(path_y[i_car][:].shape)*path_y[i_car][0]
+            # 其余x,y等信息不变 
             local_trajs_oral[i_car][0] = path_x[i_car][:]
             local_trajs_oral[i_car][1] = path_y[i_car][:]
             local_trajs_oral[i_car][2] = path_v[i_car][:]
@@ -659,16 +597,8 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
         # s, d= xy2frenet(states[i_car].position.x, states[i_car].position.y, csp)
         t_traj_start = time.time()
         path = frenet_optimal_planning(csp, s, s_d, d, 0, 0, ob, 0)
-        if path is None:
-            assert last_trajectory is not None
-            path = FrenetPath()
-            path.x = last_trajectory[0][i_car]
-            path.y = last_trajectory[1][i_car]
-            path.s_d = last_trajectory[2][i_car]
-            rospy.logwarn('Car'+str(i_car)+' planning return None. Used last trajectory')
-
         t_traj_end = time.time()
-        # print('轨迹规划时间：', t_traj_end- t_traj_start)
+        print('轨迹规划时间：', t_traj_end- t_traj_start)
 
         if path is None:
             print('cannot plannning trajectory')
@@ -683,12 +613,10 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
     t_traj_start = time.time()
     path_x, path_y, path_v = collision_avoid(local_trajs_oral)
     t_traj_end = time.time()
-    # print('避撞计算时间：', t_traj_end- t_traj_start)
-
+    print('避撞计算时间：', t_traj_end- t_traj_start)
     # 3. 将信息保存到全局中。下一次规划继续使用
     formation_ros.last_trajectory = path_x, path_y, path_v
     formation_ros.vehicle_formation_stage =vehicle_formation_stage
-    formation_ros.vehicle_states = vehicle_states
     return path_x, path_y, path_v
 
 

@@ -79,6 +79,11 @@ class PurePursuit():
             return
         
         n_roadpoint  = len(self.local_traj.roadpoints)
+        if n_roadpoint <= 0:
+            # stop for None trajectory:
+            self.cmd.data[0] = 0
+            return
+
         local_traj_xy = np.zeros([n_roadpoint, 2])
         for i  in range(n_roadpoint):
             local_traj_xy[i, 0] = self.local_traj.roadpoints[i].x

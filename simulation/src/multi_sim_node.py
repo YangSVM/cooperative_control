@@ -37,6 +37,18 @@ is_global_trajectory_ready_list = [False for i in range(n_car)]
 wp_traj = Trajectory() 
 is_wp_ready = False
 
+
+boundary = np.array([[12.06,19.49],
+    [4.51,19.77],
+    [-22.23,19.89],
+    [-22.68,-0.44],
+    [-15.10,-18.49],
+    [-6.83,-22.89],
+    [11.80,-22.88],
+    [13.49,-10.47],
+    [13.70,14.47],
+    [12.20,19.50]])
+
 class Gear(Enum):
     GEAR_DRIVE = 1
     GEAR_REVERSE = 2
@@ -209,14 +221,27 @@ def simulation():
 
     # state_map_origin = map[0, :]
     # x,y,yaw.右手系
-    state_map_origin = [2 ,17,-90]    
-    
-    rospy.loginfo("Simulation: map loaded")
-
     vehicle_state_list = []
-    for i in range(n_car):
-        vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
-        vehicle_state_list.append(vehicleState)
+
+    task = 1
+    if task == 1:
+
+        # state_map_origin = [2 ,17,-90]    
+        state_map_origin = [2 ,-8,-90]    # fast  test
+        # state_map_origin = [2 ,-8,90]  # transition test
+        for i in range(n_car):
+            vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
+            vehicle_state_list.append(vehicleState)
+
+    if task == 3:
+        start_pos = np.array([[-3,11],
+            [-5,10],
+            [-7,9],
+        ])
+        for i in range(n_car):
+            vehicleState = VehicleState(start_pos[i, 0], start_pos[i, 1], math.atan2(2, -1) )
+            vehicle_state_list.append(vehicleState)
+    
 
 
     for i in range(n_car):
@@ -261,6 +286,8 @@ def simulation():
             gps_msg = vehicleState.GetGps()
             state_pubs[i].publish(gps_msg)
 
+            plt.plot(boundary[:,0], boundary[:,1], 'r-')
+
             draw_car(vehicleState.x, vehicleState.y, vehicleState.yaw, vehicleState.steer)
             previewPoint = preview_point_list[i]
             if  abs (previewPoint.x) > (1e-5):
@@ -268,7 +295,7 @@ def simulation():
             
             if is_local_trajectory_ready_list[i]:
                 path = trajectory2np(local_trajectory_list[i])
-                plt.plot(path[:,0], path[:,1], 'b-')
+                plt.plot(path[:,0], path[:,1], 'g.')
             if is_global_trajectory_ready_list[i]:
                 path = trajectory2np(global_trajectory_list[i])
                 plt.plot(path[:,0], path[:,1], 'k-')
@@ -277,6 +304,7 @@ def simulation():
             plt.plot(wp_np[:, 0], wp_np[:, 1], 'r*')
 
         # plt.show()
+        plt.axis('square')
         plt.pause(0.001)
 
         rate.sleep()
