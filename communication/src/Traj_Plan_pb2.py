@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0fTraj_Plan.proto\x12\tTraj_Plan\"\xa4\x01\n\nTrajectory\x12\x0c\n\x04\x43ode\x18\x01 \x01(\t\x12\x33\n\nRoadPoints\x18\x02 \x03(\x0b\x32\x1f.Traj_Plan.Trajectory.RoadPoint\x1aS\n\tRoadPoint\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\x12\t\n\x01v\x18\x03 \x01(\x02\x12\t\n\x01\x61\x18\x04 \x01(\x02\x12\x0b\n\x03yaw\x18\x05 \x01(\x02\x12\r\n\x05kappa\x18\x06 \x01(\x02\"\x13\n\x03Log\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\t2@\n\tTraj_Plan\x12\x33\n\x08TrajPlan\x12\x15.Traj_Plan.Trajectory\x1a\x0e.Traj_Plan.Log\"\x00\x62\x06proto3'
+  serialized_pb=b'\n\x0fTraj_Plan.proto\x12\tTraj_Plan\"\xb2\x01\n\nTrajectory\x12\x0c\n\x04\x43ode\x18\x01 \x01(\t\x12\x33\n\nRoadPoints\x18\x02 \x03(\x0b\x32\x1f.Traj_Plan.Trajectory.RoadPoint\x1a\x61\n\tRoadPoint\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\x12\t\n\x01v\x18\x03 \x01(\x02\x12\t\n\x01\x61\x18\x04 \x01(\x02\x12\x0b\n\x03yaw\x18\x05 \x01(\x02\x12\r\n\x05kappa\x18\x06 \x01(\x02\x12\x0c\n\x04\x63ode\x18\x07 \x01(\x05\"\x13\n\x03Log\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\t2@\n\tTraj_Plan\x12\x33\n\x08TrajPlan\x12\x15.Traj_Plan.Trajectory\x1a\x0e.Traj_Plan.Log\"\x00\x62\x06proto3'
 )
 
 
@@ -75,6 +75,13 @@ _TRAJECTORY_ROADPOINT = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='code', full_name='Traj_Plan.Trajectory.RoadPoint.code', index=6,
+      number=7, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -88,7 +95,7 @@ _TRAJECTORY_ROADPOINT = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=112,
-  serialized_end=195,
+  serialized_end=209,
 )
 
 _TRAJECTORY = _descriptor.Descriptor(
@@ -126,7 +133,7 @@ _TRAJECTORY = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=31,
-  serialized_end=195,
+  serialized_end=209,
 )
 
 
@@ -157,8 +164,8 @@ _LOG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=197,
-  serialized_end=216,
+  serialized_start=211,
+  serialized_end=230,
 )
 
 _TRAJECTORY_ROADPOINT.containing_type = _TRAJECTORY
@@ -198,8 +205,8 @@ _TRAJ_PLAN = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=218,
-  serialized_end=282,
+  serialized_start=232,
+  serialized_end=296,
   methods=[
   _descriptor.MethodDescriptor(
     name='TrajPlan',

@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+
+package adm2ctrl;
+
+
+// decesion to control service
+service DtoC {
+
+  // send task info
+  rpc ExecTasks (TasksRequest) returns (TasksReply) {}
+
+  // send attack pairs
+  rpc ExecAttack (AttackRequest) returns (AttackReply) {}
+}
+
+
+// control to decision service
+service CtoD {
+
+  // send task execution feedback
+  rpc FbExecInfo (ExecInfoRequest) returns (ExecInfoReply) {}
+}
+
+
+// task execution
+message TasksRequest {
+  message Task {
+    int32 order = 1;
+    int32 type = 2;
+    TaskPos pos = 3;
+    repeated int32 agent_us = 4;
+    repeated int32 agent_enemy = 5;
+    double start_time = 6;
+    double duration = 7;
+    message TaskPos{
+      double posx = 1;
+      double posy = 2;
+      double posz = 3;
+    }
+  }
+  repeated Task tasks = 1;
+}
+
+message TasksReply {
+  string tasks_flag = 1;
+}
+
+
+// attack execution
+message AttackRequest {
+  repeated string attack_pairs = 1; // ID pairs, "0103*0202*0301*0403*", 01(us) attack 03(enemy), 02(us) attack 02(enemy), ...
+}
+
+message AttackReply {
+  string attack_flag = 1;
+}
+
+
+// execution info feedback
+message ExecInfoRequest {
+  message TaskEI {
+    int32 order = 1;
+    int32 status = 2;
+    double duration_upd = 3;
+  }
+  repeated TaskEI tasks_ei = 1;
+}
+
+message ExecInfoReply {
+  string execinfo_flag = 1;
+}
+

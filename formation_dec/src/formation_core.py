@@ -54,7 +54,7 @@ DT = 0.2  # time tick [s]
 # DT = 1
 MAX_T = 4.0 # max prediction time [s]
 MIN_T = 3.0  # min prediction time [s]
-TARGET_SPEED = 5 # target speed [m/s]
+TARGET_SPEED = 1.5 # target speed [m/s]
 D_T_S = TARGET_SPEED   # target speed sampling length [m/s]
 # N_S_SAMPLE = 1  # sampling number of target speed
 N_S_SAMPLE = 10  # sampling number of target speed
@@ -82,7 +82,7 @@ class FormationROS():
         # 调试的是第几辆车
         id_list = [1,2, 5]
         self.id_list = id_list
-        self.id_id_list_real = [0,1,2]        # id_list中，第几辆车是真车，其余车是虚拟车。即id_list[1],id_list[2](2,5号车)是真车
+        self.id_id_list_real = [0,1]        # id_list中，第几辆车是真车，其余车是虚拟车。即id_list[1],id_list[2](2,5号车)是真车
         # 发布车辆轨迹
         self.pubs = [rospy.Publisher('car'+str(id_list[i])+'/local_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
         self.pub_csps = [rospy.Publisher('car'+str(id_list[i])+'/global_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
@@ -544,7 +544,7 @@ def Assign(pos_start, pos_end):
 
 
 
-def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros: FormationROS, pos_formations_frenet):
+def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros: FormationROS, pos_formations_frenet, sample_basis=None):
     ''' 计算各车路径的函数，输入为全局路径需要经过的路点(每个路点为队形对应点)、障碍物位置
     params:
         pos_formations: np.array. [n_stage, n_car, 2]. 
@@ -638,16 +638,16 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
         else:
             print('car', i_car,': temp goal. waiting')
             if last_trajectory is None or len(last_trajectory[0][i_car]) ==0:
-                rospy.logwarn('last trajectory is None')
+                rospy.logwarn('car' + str(i_car) +' last trajectory is None')
                 continue
             path_x, path_y, path_v = last_trajectory
             tmp_v = path_v[i_car][:]
             # 速度直接置为零
             path_v[i_car][:]= np.zeros(tmp_v.shape)
             # 其余x,y等信息不变。保留第一个点
-            
-            path_x[i_car][:] = np.ones(path_x[i_car][:].shape)*path_x[i_car][0]
-            path_y[i_car][:] = np.ones(path_y[i_car][:].shape)*path_y[i_car][0]
+            safe_i = min(len(path_x[i_car])-1, 5)
+            path_x[i_car][safe_i:] = np.ones(path_x[i_car][safe_i:].shape)*path_x[i_car][safe_i]
+            path_y[i_car][safe_i:] = np.ones(path_y[i_car][safe_i:].shape)*path_y[i_car][safe_i]
             local_trajs_oral[i_car][0] = path_x[i_car][:]
             local_trajs_oral[i_car][1] = path_y[i_car][:]
             local_trajs_oral[i_car][2] = path_v[i_car][:]
@@ -703,7 +703,7 @@ def test_none_path():
                    ])
     s = 9.6
     d = 0.36223749539638794
-    s_d = 3/3.6
+    s_d = 1.5
     wp_x = np.array([[ 0.        ,  0.        ,  0.        ], [15.        , 12.40192379, 17.59807621],       [30.        , 30.        , 30.        ]])
     wp_y = np.array([[ 0. ,  3. ,  6. ],       [ 9. , 13.5, 13.5],       [ 7. , 13. , 10. ]])
     csps = []

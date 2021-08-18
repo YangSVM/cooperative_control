@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+'''
+发送小车轨迹程序
+'''
 
 import rospy
 import math
@@ -13,25 +15,27 @@ import grpc
 import logging
 from concurrent import futures
 
-import Traj_Plan_pb2 as pb2
-import Traj_Plan_pb2_grpc as pb2_grpc
+import data_transf_pb2 as pb2
+import data_transf_pb2_grpc as pb2_grpc
 
 
 def trajCallback(msg):
     logging.basicConfig()
-    with grpc.insecure_channel('localhost:50051') as channel:
-        stub = pb2_grpc.Traj_PlanStub(channel)
-        trajectory = pb2.Trajectory(Code='01')
+    with grpc.insecure_channel('166.111.50.163:19330') as channel:
+        stub = pb2_grpc.DataTransfServiceStub(channel)
+        trajectory = pb2.GuiJiInfo(zntCode='ZNT002')
         for point in msg.roadpoints:
-            roadpoint = trajectory.RoadPoints.add()
+            roadpoint = trajectory.ghGuiJi.add()
+            # roadpoint.code = point.code
             roadpoint.x = point.x
             roadpoint.y = point.y
             roadpoint.v = point.v
             roadpoint.a = point.a
             roadpoint.yaw = point.yaw
             roadpoint.kappa = point.kappa
-        response = stub.TrajPlan(trajectory)
-        print(response.data)
+            
+        response = stub.GuiJIGuiHua(trajectory)
+        print(response.msg)
 
 
 def traj_subscriber():

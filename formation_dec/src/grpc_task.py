@@ -12,9 +12,7 @@ v 1.0
 
 """
 from formation_core import FormationState
-from numpy.testing._private.utils import print_assert_equal
 
-from scipy.optimize.optimize import vecnorm
 from formation_core import Assign
 import rospy
 import numpy as np
@@ -61,7 +59,87 @@ boundary = np.array([[12.06,19.49],
     [13.49,-10.47],
     [13.70,14.47],
     [12.20,19.50]])
+
+
+class FormationGRPC():
+    def __init__(self, n_car) -> None:
+        rospy.init_node("formation_decenteralized")
+        self.n_car = n_car
+        # 调试的是第几辆车
+        id_list = [1,2, 5]
+        self.id_list = id_list
+        self.id_id_list_real = [0,1]        # id_list中，第几辆车是真车，其余车是虚拟车。即id_list[1],id_list[2](2,5号车)是真车
+        # 发布车辆轨迹
+        self.pubs = [rospy.Publisher('car'+str(id_list[i])+'/local_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
+        self.pub_csps = [rospy.Publisher('car'+str(id_list[i])+'/global_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
+        self.pub_wp =rospy.Publisher('/temp_goal', Trajectory, queue_size=1)
+        # 接收所有车辆的信息
+        for i in range(n_car):
+            rospy.Subscriber('car'+str(id_list[i])+'/gps', Odometry,  self.sub_gps_states, i)
+
+        # 车辆状态
+        self.pose_states = [Pose() for i in range(n_car)]
+        self.gps_flag = [False for i in range(n_car)]
+
+        self.rate = rospy.Rate(2)
+        self.last_trajectory = None
+        # 全局状态管理器：[起点，第一个队形点)为阶段0，[第一个队形点，第二个队形点)为阶段1，以此类推
+        self.vehicle_formation_stage = [0 for i in range(n_car)]
+        self.vehicle_states = [FormationState.running for i in range(n_car)]
+
+    def sub_gps_states(self, msg, i):
+        # rospy.loginfo('GNSS receive. Car index '+str(i))
+        self.gps_flag[i] = True
+        self.pose_states[i].position.x = msg.pose.pose.position.x
+        self.pose_states[i].position.y = msg.pose.pose.position.y
+
+        self.pose_states[i].orientation.z = msg.twist.twist.angular.z
+
+    def get_pose_states(self):
+        if all([self.gps_flag[x] for x in self.id_id_list_real] ) == True:
+            return self.pose_states
+        else:
+            rospy.logwarn('gps info not ready!')
+            print('gnss is received flag: ', self.gps_flag)
+            return None
+
+    def publish(self, v_path_x, v_path_y, v_speed ):
+        '''在正常坐标系下规划，轨迹跟踪是左手系下的，需要转换
+        '''
+        n_car = self.n_car
+        for i in range(n_car):
+            n_road_point = len(v_path_x[i])
+            traj = Trajectory()
+            for i_rp in range(n_road_point):
+                rp = RoadPoint()
+                rp.x = v_path_x[i][i_rp]        # 注意x = y的转换
+                rp.y = v_path_y[i][i_rp]
+                rp.v = v_speed[i][i_rp]
+                traj.roadpoints.append(rp)
+            self.pubs[i].publish(traj)
     
+    def pub_traj(self, trajs):
+        for i in range(len(trajs)):
+            self.pubs[i].publish(trajs[i])
+
+    def publish_csps(self, trajs):
+        '''在正常坐标系下规划，轨迹跟踪是左手系下的，需要转换
+        '''
+        n_car = self.n_car
+        for i_car in range(n_car):
+            self.pub_csps[i_car].publish(trajs[i_car])
+
+    def publish_wp(self, trajs):
+        self.pub_wp(trajs)
+
+
+
+
+
+
+
+
+
 def pack_trajectory(roadpoints, pub_v=True):
     # packing list/numpy to ros Trajectory
     n_points = len(roadpoints)

@@ -20,8 +20,8 @@ from trajectory_tracking.msg import Trajectory
 from math import pi
 
 # 全局定义参数：总车辆数目
-n_car = 3
-id_list = [1,2,5]
+n_car = 1
+id_list = [5]
 
 # 全局变量。
 preview_point = Point(0,0,0)
@@ -227,8 +227,9 @@ def simulation():
     if task == 1:
 
         # state_map_origin = [2 ,17,-90]    
-        state_map_origin = [2 ,-8,-90]    # fast  test
-        # state_map_origin = [2 ,-8,90]  # transition test
+        # state_map_origin = [2 ,-8,-90]    # fast  test
+        state_map_origin = [-2, 8,-90]  # field test
+
         for i in range(n_car):
             vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
             vehicle_state_list.append(vehicleState)
@@ -266,9 +267,16 @@ def simulation():
                 [25,11]
                 ])
     
+    # ob =np.array([[ -3.21114562,  15.36656315]
+    #    [ -6.78885438,  13.57770876],
+    #    [-10.36656315,  11.78885438]])
+
+    # ob =np.array([[-2.31671843, 13.57770876],
+    #    [-5.89442719, 11.78885438],
+    #    [-9.47213595, 10.        ]])
     while not rospy.is_shutdown():
         # plot simulation
-        plt.cla()
+        # plt.cla()
         # plt.plot(map[:,2], map[:, 1], 'k--')
         # plot_scene_wp([], [], ob)
         # for i_ob in ob:
@@ -276,7 +284,7 @@ def simulation():
         #     x = i_ob[0] + 0.5*1 * np.cos(theta)
         #     y = i_ob[1] + 0.5*1 * np.sin(theta)
         #     plt.plot(x, y, 'k-')
-
+        plt.plot(ob[:, 0], ob[:,1], 'bo')
         # for i_wp in range(n_wp):
         #     plt.plot(wp_x[i_wp], wp_y[i_wp], 'r*')
 
@@ -286,29 +294,29 @@ def simulation():
             gps_msg = vehicleState.GetGps()
             state_pubs[i].publish(gps_msg)
 
-            plt.plot(boundary[:,0], boundary[:,1], 'r-')
+        #     plt.plot(boundary[:,0], boundary[:,1], 'r-')
 
-            draw_car(vehicleState.x, vehicleState.y, vehicleState.yaw, vehicleState.steer)
-            previewPoint = preview_point_list[i]
-            if  abs (previewPoint.x) > (1e-5):
-                plt.plot(previewPoint.x, previewPoint.y, 'r*')
+        #     draw_car(vehicleState.x, vehicleState.y, vehicleState.yaw, vehicleState.steer)
+        #     previewPoint = preview_point_list[i]
+        #     if  abs (previewPoint.x) > (1e-5):
+        #         plt.plot(previewPoint.x, previewPoint.y, 'r*')
             
-            if is_local_trajectory_ready_list[i]:
-                path = trajectory2np(local_trajectory_list[i])
-                plt.plot(path[:,0], path[:,1], 'g.')
-            if is_global_trajectory_ready_list[i]:
-                path = trajectory2np(global_trajectory_list[i])
-                plt.plot(path[:,0], path[:,1], 'k-')
-        if is_wp_ready:
-            wp_np = trajectory2np(wp_traj)
-            plt.plot(wp_np[:, 0], wp_np[:, 1], 'r*')
+        #     if is_local_trajectory_ready_list[i]:
+        #         path = trajectory2np(local_trajectory_list[i])
+        #         plt.plot(path[:,0], path[:,1], 'g.')
+        #     if is_global_trajectory_ready_list[i]:
+        #         path = trajectory2np(global_trajectory_list[i])
+        #         plt.plot(path[:,0], path[:,1], 'k-')
+        # if is_wp_ready:
+        #     wp_np = trajectory2np(wp_traj)
+        #     plt.plot(wp_np[:, 0], wp_np[:, 1], 'r*')
 
-        # plt.show()
-        plt.axis('square')
-        plt.pause(0.001)
+        # # plt.show()
+        # plt.axis('square')
+        # plt.pause(0.001)
 
         rate.sleep()
-    plt.show()
+    # plt.show()
 
 if __name__ == '__main__':
     # draw_car(0, 0, 0, 0.2)

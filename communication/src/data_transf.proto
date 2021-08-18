@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+option cc_generic_services = true;
+package data_transf;
+//智能体状态信息
+message ZNTStatusInfo {
+	string zntCode = 1;
+	string zntName = 2;
+	string zntCate = 3;
+	string zntType = 4;
+	repeated double size = 5;
+	double quality = 6;
+	double height = 7;
+	double fyAngle = 8;
+	double fgAngle = 9;
+	double vPosition = 10;
+	double hPosition = 11;
+	repeated double zntPosition =12;
+	double hxAngle = 13;
+	double vSpeed = 14;
+	double hSpeed = 15;
+	double hBaijiaoSpeed = 16;
+	double vAcceleration = 17;
+	double hAcceleration = 18;
+	int64 sendTime = 19;
+
+}
+
+//基本的返回消息体
+message BaseRespInfo{
+	string code = 1;
+	string msg = 2;
+	int64 serverTime = 3;
+
+}
+//数据订阅请求结构
+message SubscribeInfo{
+	string moduleCode = 1;
+	string operType = 2;
+	string moduleHost = 3;
+	int32 modulePort = 4;
+	string dataCodes = 5;
+	int64 sendTime = 6;
+}
+message RoadPoint{
+	int32 code=1;
+	double x = 2;
+	double y = 3;
+	double v = 4;
+	double a = 5;
+	double yaw = 6;
+	double kappa = 7;
+	int32 type =8;
+}
+//轨迹规划请求结构
+message GuiJiInfo{
+	string zntCode = 1;
+	repeated RoadPoint ghGuiJi = 2;
+	int64 sendTime = 6;
+}
+//障碍物消息体
+message ObstacleInfo{
+	string zntCode =1;
+	repeated double position =2;
+	int32 type=3;
+	double speed=4;
+	double orientation=5;
+	int64 sendTime=6;
+}
+//人员信息
+message PersonInfo{
+	string zntCode =1;
+	string dkAttribute =2;
+	repeated double swPosition =3;
+	string ziTai =4;
+	double chaoXiang =5;
+	repeated double size =6;
+	double speed =7;
+	string bingZhong =8;
+	double jkDu =9;
+	double sendTime =10;
+}
+//道路信息
+message RoadInfo{
+	string zntCode =1;
+	string attribute =2;
+	double wzDu =3;
+	double sendTime =4;
+
+}
+//装备信息
+message EquipInfo{
+	string zntCode =1;
+	string dkAttribute =2;
+	repeated double swPosition =3;
+	repeated double size =4;
+	double speed =5;
+	double chaoXiang =6;
+	double wzSpeed =7;
+	double sendTime =8;
+
+}
+//人员信息请求数据
+message PersonReq{
+	repeated PersonInfo datas = 1;
+}
+//道路信息请求数据
+message RoadReq{
+	repeated RoadInfo datas = 1;
+}
+//装备信息请求数据
+message EquipReq{
+	repeated EquipInfo datas = 1;
+}
+// The visualization service definition.
+service DataTransfService {
+
+  // 轨迹规划 协同控制模块调用 数据收发模块转发到智能体
+  rpc GuiJIGuiHua (GuiJiInfo) returns (BaseRespInfo) {}
+
+  // 数据订阅 各个模块订阅数据
+  rpc SubscribeData (SubscribeInfo) returns (BaseRespInfo) {}
+
+  // 智能体状态接收 订阅智能体状态的模块实现该服务端接口
+  rpc ZNTStatusReceive (ZNTStatusInfo) returns (BaseRespInfo) {}
+
+  //障碍物信息，订阅障碍物数据的实现该接口
+  rpc ObstacleReceive(ObstacleInfo) returns (BaseRespInfo) {}
+
+  //人员信息接收接口，订阅人员数据方实现该接口
+  rpc PersonInfoReceive(PersonReq) returns (BaseRespInfo) {}
+
+   //道路信息接收接口，订阅道路数据方实现该接口
+  rpc RoadInfoReceive(RoadReq) returns (BaseRespInfo) {}
+
+  //装备信息接收接口，订阅装备数据方实现该接口
+  rpc EquipInfoReceive(EquipReq) returns (BaseRespInfo) {}
+
+}

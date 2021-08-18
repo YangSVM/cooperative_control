@@ -13,8 +13,8 @@ from math import pi
 from geometry_msgs.msg import Pose
 
 # 全局定义参数：总车辆数目
-n_car = 2
-id_list = [1,2]
+n_car = 3
+id_list = [1,2, 5]
 
 # 全局变量。
 preview_point = Point(0,0,0)
@@ -34,6 +34,17 @@ is_gps_ready_list = [False for i in range(n_car)]
 wp = Trajectory()
 is_wp_ready = False
 
+boundary = np.array([[12.06,19.49],
+    [4.51,19.77],
+    [-22.23,19.89],
+    [-22.68,-0.44],
+    [-15.10,-18.49],
+    [-6.83,-22.89],
+    [11.80,-22.88],
+    [13.49,-10.47],
+    [13.70,14.47],
+    [12.20,19.50]])
+    
 
 def sub_gps_states(msg, i):
     global is_gps_ready_list, pose_states
@@ -162,7 +173,7 @@ def visual():
                 vehicleState = pose_states[i]
                 plt.plot(vehicleState.position.x, vehicleState.position.y, 'bo')
             
-            
+            plt.plot(boundary[:,0], boundary[:,1], 'r-')
             if  is_preview_point_ready_list[i]:
                 previewPoint = preview_point_list[i]
                 plt.plot(previewPoint.x, previewPoint.y, 'k*')

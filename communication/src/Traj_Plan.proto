@@ -9,6 +9,7 @@ message Trajectory{
         float a = 4;
         float yaw = 5;
         float kappa = 6;
+        int32 code = 7;
     }
 	string Code = 1;
 	repeated RoadPoint RoadPoints = 2;
