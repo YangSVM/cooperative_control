@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0e\x61\x64m2ctrl.proto\x12\x08\x61\x64m2ctrl\"\x94\x02\n\x0cTasksRequest\x12*\n\x05tasks\x18\x01 \x03(\x0b\x32\x1b.adm2ctrl.TasksRequest.Task\x1a\xd7\x01\n\x04Task\x12\r\n\x05order\x18\x01 \x01(\x05\x12\x0c\n\x04type\x18\x02 \x01(\x05\x12\x30\n\x03pos\x18\x03 \x01(\x0b\x32#.adm2ctrl.TasksRequest.Task.TaskPos\x12\x10\n\x08\x61gent_us\x18\x04 \x03(\x05\x12\x13\n\x0b\x61gent_enemy\x18\x05 \x03(\x05\x12\x12\n\nstart_time\x18\x06 \x01(\x01\x12\x10\n\x08\x64uration\x18\x07 \x01(\x01\x1a\x33\n\x07TaskPos\x12\x0c\n\x04posx\x18\x01 \x01(\x01\x12\x0c\n\x04posy\x18\x02 \x01(\x01\x12\x0c\n\x04posz\x18\x03 \x01(\x01\" \n\nTasksReply\x12\x12\n\ntasks_flag\x18\x01 \x01(\t\"%\n\rAttackRequest\x12\x14\n\x0c\x61ttack_pairs\x18\x01 \x03(\t\"\"\n\x0b\x41ttackReply\x12\x13\n\x0b\x61ttack_flag\x18\x01 \x01(\t\"\x84\x01\n\x0f\x45xecInfoRequest\x12\x32\n\x08tasks_ei\x18\x01 \x03(\x0b\x32 .adm2ctrl.ExecInfoRequest.TaskEI\x1a=\n\x06TaskEI\x12\r\n\x05order\x18\x01 \x01(\x05\x12\x0e\n\x06status\x18\x02 \x01(\x05\x12\x14\n\x0c\x64uration_upd\x18\x03 \x01(\x01\"&\n\rExecInfoReply\x12\x15\n\rexecinfo_flag\x18\x01 \x01(\t2\x83\x01\n\x04\x44toC\x12;\n\tExecTasks\x12\x16.adm2ctrl.TasksRequest\x1a\x14.adm2ctrl.TasksReply\"\x00\x12>\n\nExecAttack\x12\x17.adm2ctrl.AttackRequest\x1a\x15.adm2ctrl.AttackReply\"\x00\x32J\n\x04\x43toD\x12\x42\n\nFbExecInfo\x12\x19.adm2ctrl.ExecInfoRequest\x1a\x17.adm2ctrl.ExecInfoReply\"\x00\x62\x06proto3'
+  serialized_pb=b'\n\x0e\x61\x64m2ctrl.proto\x12\x08\x61\x64m2ctrl\"\xac\x02\n\x0cTasksRequest\x12*\n\x05tasks\x18\x01 \x03(\x0b\x32\x1b.adm2ctrl.TasksRequest.Task\x12\x16\n\x0einit_timestamp\x18\x02 \x01(\x01\x1a\xd7\x01\n\x04Task\x12\r\n\x05order\x18\x01 \x01(\x05\x12\x0c\n\x04type\x18\x02 \x01(\x05\x12\x30\n\x03pos\x18\x03 \x01(\x0b\x32#.adm2ctrl.TasksRequest.Task.TaskPos\x12\x10\n\x08\x61gent_us\x18\x04 \x03(\x05\x12\x13\n\x0b\x61gent_enemy\x18\x05 \x03(\x05\x12\x12\n\nstart_time\x18\x06 \x01(\x01\x12\x10\n\x08\x64uration\x18\x07 \x01(\x01\x1a\x33\n\x07TaskPos\x12\x0c\n\x04posx\x18\x01 \x01(\x01\x12\x0c\n\x04posy\x18\x02 \x01(\x01\x12\x0c\n\x04posz\x18\x03 \x01(\x01\" \n\nTasksReply\x12\x12\n\ntasks_flag\x18\x01 \x01(\t\"%\n\rAttackRequest\x12\x14\n\x0c\x61ttack_pairs\x18\x01 \x03(\t\"\"\n\x0b\x41ttackReply\x12\x13\n\x0b\x61ttack_flag\x18\x01 \x01(\t\"\x84\x01\n\x0f\x45xecInfoRequest\x12\x32\n\x08tasks_ei\x18\x01 \x03(\x0b\x32 .adm2ctrl.ExecInfoRequest.TaskEI\x1a=\n\x06TaskEI\x12\r\n\x05order\x18\x01 \x01(\x05\x12\x0e\n\x06status\x18\x02 \x01(\x05\x12\x14\n\x0c\x64uration_upd\x18\x03 \x01(\x01\"&\n\rExecInfoReply\x12\x15\n\rexecinfo_flag\x18\x01 \x01(\t2\x83\x01\n\x04\x44toC\x12;\n\tExecTasks\x12\x16.adm2ctrl.TasksRequest\x1a\x14.adm2ctrl.TasksReply\"\x00\x12>\n\nExecAttack\x12\x17.adm2ctrl.AttackRequest\x1a\x15.adm2ctrl.AttackReply\"\x00\x32J\n\x04\x43toD\x12\x42\n\nFbExecInfo\x12\x19.adm2ctrl.ExecInfoRequest\x1a\x17.adm2ctrl.ExecInfoReply\"\x00\x62\x06proto3'
 )
 
 
@@ -66,8 +66,8 @@ _TASKSREQUEST_TASK_TASKPOS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=254,
-  serialized_end=305,
+  serialized_start=278,
+  serialized_end=329,
 )
 
 _TASKSREQUEST_TASK = _descriptor.Descriptor(
@@ -139,8 +139,8 @@ _TASKSREQUEST_TASK = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=90,
-  serialized_end=305,
+  serialized_start=114,
+  serialized_end=329,
 )
 
 _TASKSREQUEST = _descriptor.Descriptor(
@@ -158,6 +158,13 @@ _TASKSREQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='init_timestamp', full_name='adm2ctrl.TasksRequest.init_timestamp', index=1,
+      number=2, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -171,7 +178,7 @@ _TASKSREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=29,
-  serialized_end=305,
+  serialized_end=329,
 )
 
 
@@ -202,8 +209,8 @@ _TASKSREPLY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=307,
-  serialized_end=339,
+  serialized_start=331,
+  serialized_end=363,
 )
 
 
@@ -234,8 +241,8 @@ _ATTACKREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=341,
-  serialized_end=378,
+  serialized_start=365,
+  serialized_end=402,
 )
 
 
@@ -266,8 +273,8 @@ _ATTACKREPLY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=380,
-  serialized_end=414,
+  serialized_start=404,
+  serialized_end=438,
 )
 
 
@@ -312,8 +319,8 @@ _EXECINFOREQUEST_TASKEI = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=488,
-  serialized_end=549,
+  serialized_start=512,
+  serialized_end=573,
 )
 
 _EXECINFOREQUEST = _descriptor.Descriptor(
@@ -343,8 +350,8 @@ _EXECINFOREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=417,
-  serialized_end=549,
+  serialized_start=441,
+  serialized_end=573,
 )
 
 
@@ -375,8 +382,8 @@ _EXECINFOREPLY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=551,
-  serialized_end=589,
+  serialized_start=575,
+  serialized_end=613,
 )
 
 _TASKSREQUEST_TASK_TASKPOS.containing_type = _TASKSREQUEST_TASK
@@ -468,8 +475,8 @@ _DTOC = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=592,
-  serialized_end=723,
+  serialized_start=616,
+  serialized_end=747,
   methods=[
   _descriptor.MethodDescriptor(
     name='ExecTasks',
@@ -504,8 +511,8 @@ _CTOD = _descriptor.ServiceDescriptor(
   index=1,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=725,
-  serialized_end=799,
+  serialized_start=749,
+  serialized_end=823,
   methods=[
   _descriptor.MethodDescriptor(
     name='FbExecInfo',

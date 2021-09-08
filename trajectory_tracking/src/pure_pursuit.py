@@ -24,6 +24,7 @@ previewPoint = Point(0,0,0)
 class PurePursuit():
     def __init__(self):
         self.rate = rospy.Rate(60)
+        self.error_ending = True   
 
         self.is_gps_ready = False
         self.is_local_trajectory_ready = False
@@ -36,7 +37,7 @@ class PurePursuit():
         self.preview_point = Point()
 
         # 输入 gnss, 规划的局部避撞轨迹
-        rospy.Subscriber('gps', Odometry,  self.compute_cmd)
+        rospy.Subscriber('car/gps', Odometry,  self.compute_cmd)
         rospy.Subscriber('local_trajectory', Trajectory, self.get_local_trajectory)
 
         # 输出控制指令
@@ -55,12 +56,13 @@ class PurePursuit():
 
         while not rospy.is_shutdown():
             
-            if self.is_local_trajectory_ready and self.is_gps_ready :
+            if not self.error_ending and self.is_local_trajectory_ready and self.is_gps_ready :
                 self.pub_cmd.publish(self.cmd)
                 self.pub_preview_point.publish(self.preview_point)
             self.rate.sleep()
 
     def compute_cmd(self, msg):
+        self.error_ending = True
         self.is_gps_ready = True
 
         # 赋值
@@ -88,6 +90,13 @@ class PurePursuit():
         for i  in range(n_roadpoint):
             local_traj_xy[i, 0] = self.local_traj.roadpoints[i].x
             local_traj_xy[i, 1] = self.local_traj.roadpoints[i].y
+
+        # local_traj_xy
+        # 边界情况。收到空的局部轨迹，停车  
+        if len(local_traj_xy) == 0:
+            self.cmd.data[0] = 0
+            self.cmd.data[1] = 0
+            return
 
         # find the current waypoint according to distance.
         id_current, distance_current = self.get_current_roadpoint(local_traj_xy, self.posture)
@@ -141,6 +150,9 @@ class PurePursuit():
         if preview_distance_real < 0.5:
             self.cmd.data[0] = 0
             self.cmd.data[1] = 0
+        
+        # 正常运行时，从此处完成
+        self.error_ending = False
         return
 
 

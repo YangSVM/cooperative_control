@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+'''请求gps数据
+grpc2ros
+'''
+
 import rospy
-import numpy as np
 from nav_msgs.msg import Odometry
 
-from time import sleep
 import grpc
 import logging
 from concurrent import futures
@@ -16,28 +18,26 @@ import sys
 '''
 与中心节点传输数据所用的IP与端口号
 '''
-IP_CORE = '166.111.50.163'  # FIXME: 修改为运行数据交互节点的IP
-IP_SITU = '183.173.115.75'  # FIXME: 修改为运行态势节点的主机IP
+IP_CORE = '166.111.50.173'  # FIXME: 修改为运行数据交互节点的IP
+IP_CONTROL = '183.173.115.169'  # FIXME: 修改为运行目前节点的主机IP
 PORT_ASK_DATA = '19330'
-PORT_CORE2SITU = '40010'  # FIXME: 修改为本机预备接受回传数据的端口号
+PORT_CORE2CTRL = '40011'  # FIXME: 修改为本节点预备接受回传数据的端口号
 
 
 
 class GPS(pb2_grpc.DataTransfServiceServicer):
     def ZNTStatusReceive(self, request, context):
         print("Receive agent", request.zntCode)
-
-        pub = rospy.Publisher('/car1/gps', Odometry, queue_size=1)
-        # rate = rospy.Rate(10)
+        car_id = request.zntCode[-1]
+        pub = rospy.Publisher('/car'+str(car_id)+'/gps', Odometry, queue_size=1)
 
         gps_msg = Odometry()
-        print(request.hPosition, request.vPosition, request.hxAngle)
-        gps_msg.pose.pose.position.x = request.hPosition
-        gps_msg.pose.pose.position.y = request.vPosition
+        print(request.zntPosition[0], request.zntPosition[1], request.hxAngle)
+        gps_msg.pose.pose.position.x = request.zntPosition[0]
+        gps_msg.pose.pose.position.y = request.zntPosition[1]
         gps_msg.twist.twist.angular.z = request.hxAngle
-
+    
         pub.publish(gps_msg)
-        # rate.sleep()
 
         response = pb2.BaseRespInfo(
             code='200',
@@ -57,8 +57,8 @@ def Ask_Data():
         msg = pb2.SubscribeInfo(
             moduleCode='XT',
             operType='DY',
-            moduleHost=IP_SITU,
-            modulePort=int(PORT_CORE2SITU),
+            moduleHost=IP_CONTROL,
+            modulePort=int(PORT_CORE2CTRL),
             dataCodes='ZNTZT',
             # sendTime=0 # FIXME: sendTime写啥？
         )
@@ -71,12 +71,12 @@ def Ask_Data():
 
 
 def serve():
-    rospy.init_node('talker', anonymous=True)
+    rospy.init_node('formation_gps_request')
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     
     pb2_grpc.add_DataTransfServiceServicer_to_server(
         GPS(), server)
-    server.add_insecure_port(IP_SITU+':'+PORT_CORE2SITU)
+    server.add_insecure_port(IP_CONTROL+':'+PORT_CORE2CTRL)
     server.start()
     print("Waiting for request")
     server.wait_for_termination()

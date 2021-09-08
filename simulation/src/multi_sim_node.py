@@ -20,8 +20,8 @@ from trajectory_tracking.msg import Trajectory
 from math import pi
 
 # 全局定义参数：总车辆数目
-n_car = 1
-id_list = [5]
+n_car = 3
+id_list = [1,2,5]
 
 # 全局变量。
 preview_point = Point(0,0,0)
@@ -226,9 +226,9 @@ def simulation():
     task = 1
     if task == 1:
 
-        # state_map_origin = [2 ,17,-90]    
+        state_map_origin = [2 ,17,-90]    
         # state_map_origin = [2 ,-8,-90]    # fast  test
-        state_map_origin = [-2, 8,-90]  # field test
+        # state_map_origin = [-2, 8,-90]  # field test
 
         for i in range(n_car):
             vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )

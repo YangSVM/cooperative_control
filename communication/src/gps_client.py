@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
+'''测试自车请求GPS程序
+ros2grpc
+'''
 import rospy
 import math
 import numpy as np

@@ -32,6 +32,7 @@ from trajectory_tracking.msg import Trajectory, RoadPoint
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 from enum import Enum
+from std_msgs.msg import Float64MultiArray
 
 try:
     from quintic_polynomials_planner import QuinticPolynomial
@@ -59,7 +60,7 @@ D_T_S = TARGET_SPEED   # target speed sampling length [m/s]
 # N_S_SAMPLE = 1  # sampling number of target speed
 N_S_SAMPLE = 10  # sampling number of target speed
 
-ROBOT_RADIUS = 1.0  # robot radius [m]
+ROBOT_RADIUS = 0.5  # robot radius [m]
 t_thre=1.5 #碰撞检测时间阈值[s]
 
 # cost weights
@@ -77,16 +78,17 @@ FormationState = Enum('FormationState', ('running', 'temp_goal', 'goal', 'waitin
 
 class FormationROS():
     def __init__(self, n_car) -> None:
-        rospy.init_node("formation_decenteralized")
+        rospy.init_node("formation_core")
         self.n_car = n_car
         # 调试的是第几辆车
         id_list = [1,2, 5]
         self.id_list = id_list
-        self.id_id_list_real = [0,1]        # id_list中，第几辆车是真车，其余车是虚拟车。即id_list[1],id_list[2](2,5号车)是真车
+        self.id_id_list_real = [0,1,2]        # id_list中，第几辆车是真车，其余车是虚拟车。即id_list[1],id_list[2](2,5号车)是真车
         # 发布车辆轨迹
         self.pubs = [rospy.Publisher('car'+str(id_list[i])+'/local_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
         self.pub_csps = [rospy.Publisher('car'+str(id_list[i])+'/global_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
         self.pub_wp =rospy.Publisher('/temp_goal', Trajectory, queue_size=1)
+        self.pub_task_time = rospy.Publisher('task_time_remain', Float64MultiArray, queue_size=1)
         # 接收所有车辆的信息
         for i in range(n_car):
             rospy.Subscriber('car'+str(id_list[i])+'/gps', Odometry,  self.sub_gps_states, i)
@@ -655,7 +657,7 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
         
         # rospy.loginfo('car'+str(i_car) +' formation stage:' + str( vehicle_formation_stage[i_car]))
         
-        s_d = 3/3.6
+        s_d = TARGET_SPEED
         # s, d= xy2frenet(states[i_car].position.x, states[i_car].position.y, csp)
         t_traj_start = time.time()
         path = frenet_optimal_planning(csp, s, s_d, d, 0, 0, ob, 0)

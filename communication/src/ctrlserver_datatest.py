@@ -1,4 +1,4 @@
-"""The Python implementation of the GRPC adm2vis.Visual server for data test."""
+""" The control server model for sending-receiving data test. """
 
 
 from concurrent import futures
@@ -12,13 +12,15 @@ import adm2ctrl_pb2_grpc
 import threading
 
 
-CTRL_RCV_ADDR = 'localhost:20208'
+IP_ADDR = '183.173.113.26:'
+
+CTRL_RCV_ADDR = IP_ADDR + '20208'
 
 
 class DtoC(adm2ctrl_pb2_grpc.DtoCServicer):
 
     def ExecTasks(self, request, context):
-        print("control server received: " + str(request.tasks))
+        print("control server received: " + str(request.tasks) + str(request.init_timestamp))
         return adm2ctrl_pb2.TasksReply(tasks_flag="tasks received")
     
     def ExecAttack(self, request, context):

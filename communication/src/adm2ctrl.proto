@@ -40,6 +40,7 @@ message TasksRequest {
     }
   }
   repeated Task tasks = 1;
+  double init_timestamp = 2;
 }
 
 message TasksReply {

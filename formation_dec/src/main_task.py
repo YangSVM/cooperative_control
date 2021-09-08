@@ -4,15 +4,20 @@
 v 1.0
 
 还需要增加功能：
-1. GRPC读取。(建议单独写一个test函数。保留现有的使用ros的仿真结果)
+1. 增加grpc ros接口。任务逻辑接口
+    - 收到任务指令才开始（仿真这个）
+    - 按照给定的时间进行任务(如果任务计划表中的开始时间没到，不开始)
+    - 打击实现任务改变
+    - 定时返回预计完成时间
+2. 疑问：duration是否是end time的意思(不是。有start time)
 2. sample strategy
 
 希望增加功能：
 1. 编队保持状态的反馈控制：(根据现有位置和理想编队位置的偏差，发布速度指令进行控制)
 
 """
+from numpy.core.fromnumeric import take
 from formation_core import FormationState
-from numpy.testing._private.utils import print_assert_equal
 
 from scipy.optimize.optimize import vecnorm
 from formation_core import Assign
@@ -23,9 +28,9 @@ from formation_zoo import *
 from math import pi
 from formation_core import local_traj_gen, FormationROS, cartesian2frenet
 import cubic_spline_planner
-import threading
 import time
 import math
+from communication.msg import ExecInfoRequest, TasksRequest, AttackRequest, TaskEI
 
 
 PI = pi
@@ -61,7 +66,97 @@ boundary = np.array([[12.06,19.49],
     [13.49,-10.47],
     [13.70,14.47],
     [12.20,19.50]])
-    
+
+
+class FormationWithTask(FormationROS):
+    def __init__(self, n_car):
+        super(FormationWithTask, self).__init__(n_car)
+        rospy.Subscriber('TasksRequest', TasksRequest, self.task_request_callback)
+        rospy.Subscriber('AttackRequest', AttackRequest, self.attack_request_callback)
+        # time step for start
+        self.init_timestamp = None
+        self.init_timestamp_flag = False
+        self.tasks_info = None
+        self.attack_info_string = None
+        # list of dict(stages). dict: key enemy, value: ally.
+        self.attack_stages_info = None
+        self.pub_tasks_ei = rospy.Publisher('ExecInfoRequest', ExecInfoRequest, queue_size=1)
+        self.attack_direction = None
+
+    def task_request_callback(self, msg):
+        if not self.init_timestamp_flag:
+            self.init_timestamp_flag = True
+            self.init_timestamp = msg.tasks[0].init_timestamp
+
+        self.tasks_info = msg
+        
+   
+    def attack_request_callback(self, msg):
+        self.attack_info_string = msg
+        self.parse_attack_info()
+
+    def parse_attack_info(self):
+        # translate the attack string into list of dict. (one ally can attack one ally only)
+        self.attack_stages_info = []
+        for string in self.attack_info_string:
+            attack_pairs = string.split('*')
+            stage = {}
+            for attack_pair in attack_pairs:
+                enemy_id = int(attack_pair[2:])
+                ally_id = int(attack_pair[:2])
+                if enemy_id in stage.keys():
+                    stage[enemy_id].append(ally_id)
+                else:
+                    stage[enemy_id] = [ally_id]
+            self.attack_stages_info.append(stage)
+        
+        # 根据数组初步判断。看第一个阶段打哪辆车.  TODO 确认敌方第一辆车是4号车。
+        
+        if 4 in self.attack_stages_info[0].keys():
+            self.attack_direction = -1          # 4打左边的车
+        elif 5 in self.attack_stages_info[0].keys():
+            self.attack_direction = 1           # 5打右边的车
+        else:
+            rospy.logerr('cannot define attack direction')
+
+    def calc_task_duration(self, task):
+
+        if self.tasks_info is None:
+            return
+        
+        # 假设order按照顺序发送。忽略排序的过程
+        exec_info = ExecInfoRequest()
+        task_time = [100,200,300,400,500]
+        time_now = time.time() - self.init_timestamp
+        for task_info in self.tasks_info.tasks:
+            task_ei = TaskEI()
+            task_ei.order = task_info.order
+            task_type = task_info.type
+            if task_type >task:
+                task_ei.status = -1
+            elif task_type == task:
+                task_ei.status = 1
+            elif task_type < task:
+                task_ei.status = 0
+            
+            task_ei.duration_upd = task_time[task] - time_now 
+            exec_info.tasks_ei.append(task_ei)
+
+
+        self.pub_tasks_ei(exec_info)
+        pass
+
+    def judge_next_task(self, pretask):
+        ''' 根据TasksRequest开始信息进行。
+        '''
+        assert self.init_timestamp_flag, 'task not init. donot have init_timestamp'
+        time_now = time.time() - self.init_timestamp
+        res = True
+        if time_now < self.tasks_info.tasks[pretask+1].start_time:
+            res=False
+        return res
+
+
 def pack_trajectory(roadpoints, pub_v=True):
     # packing list/numpy to ros Trajectory
     n_points = len(roadpoints)
@@ -132,9 +227,9 @@ class TaskBase():
         if i_task==1:
             pos_formations = load_scene_summon()
         elif i_task==2:
-            pos_formations = load_scene_battle_forward()
+            pos_formations = load_scene_prebattle()
         elif i_task==3:
-            pos_formations, obs = load_scene_battle_with_obstacle()
+            pos_formations, obs = load_scene_battle()
         elif i_task==4:
             pursuit()
         else:
@@ -146,6 +241,13 @@ class TaskBase():
 
         # 队形点的frenet坐标。这个时间为20ms，得提前算
         self.pos_formations_frenet = self.calc_pos_frenet(pos_formations)
+
+    def reload_scene(self, task_id, direction):
+        if task_id == 3:
+            pos_formations, obs = load_scene_battle(direction)
+            self.obs = obs
+            self.pos_formations = pos_formations
+            self.pos_formations_frenet = self.calc_pos_frenet(pos_formations)
 
 
     def calc_pos_frenet(self, pos_formations):
@@ -214,40 +316,6 @@ def plot4test(pos_formations, obs):
 
 
 
-def load_scene_battle_with_obstacle():
-    ''' 打击！通过锥桶逐个打击.障碍物。锥桶位置都修改。暂定只保留
-    '''
-    pos_formations = []
-    start_pos = np.array([[-3,11],
-        [-5,10],
-        [-7,9],
-    ])
-    pos_formations.append(start_pos)
-
-    delta_line = 4
-    center0 = start_pos[1, :]
-    vec_norm = np.array([-1, 2])/np.sqrt(5)
-    vec_line = np.array([2, 1])/np.sqrt(5)
-    degree_norm = math.atan2(vec_norm[1], vec_norm[0])*180/pi
-    degree_line = math.atan2(vec_line[1], vec_line[0])*180/pi
-    center1 = center0 + vec_norm*delta_line + vec_line * 2     # 
-    pos_line = formation_line(center1, degree_norm, n_car, 2)
-    pos_formations.append(pos_line)
-    
-    center2 = center0 + vec_norm*delta_line*2
-    pos_v_line  = formation_line(center2, degree_line, n_car, 2)
-    pos_formations.append(pos_v_line)
-    pos_formations = np.array(pos_formations)
-
-    # 目标分配
-    for i_stage in range(1, pos_formations.shape[0]):
-        pos_formations[i_stage, :] = Assign(pos_formations[i_stage-1, :], pos_formations[i_stage, :])
-    
-    center_obs = center0 + vec_norm*2
-    obs = formation_line(center_obs, degree_line, 3, 4)
-    return pos_formations, obs
-
-
 def load_scene_summon():
     '''集结场景
     '''
@@ -304,7 +372,7 @@ def load_scene_summon():
     return pos_formations
 
 
-def load_scene_battle_forward():
+def load_scene_prebattle():
     '''编队前去指定地点
     '''
         # 设计轨迹
@@ -339,6 +407,41 @@ def load_scene_battle_forward():
     return pos_formations
     
 
+def load_scene_battle(direction=1):
+    ''' 打击！通过锥桶逐个打击.障碍物。锥桶位置都修改。暂定只保留
+    '''
+    pos_formations = []
+    start_pos = np.array([[-3,11],
+        [-5,10],
+        [-7,9],
+    ])
+    pos_formations.append(start_pos)
+
+    delta_line = 4
+    start_pos_center = start_pos[1, :]
+    vec_norm = np.array([-1, 2])/np.sqrt(5)
+    vec_line = np.array([2, 1])/np.sqrt(5)
+    degree_norm = math.atan2(vec_norm[1], vec_norm[0])*180/pi
+    degree_line = math.atan2(vec_line[1], vec_line[0])*180/pi
+    center1 = start_pos_center + vec_norm*delta_line + vec_line * 2 *direction    # 
+    pos_line = formation_line(center1, degree_norm, n_car, 2)
+    pos_formations.append(pos_line)
+    
+    center2 = start_pos_center + vec_norm*delta_line*2
+    pos_v_line  = formation_line(center2, degree_line, n_car, 2)
+    pos_formations.append(pos_v_line)
+    pos_formations = np.array(pos_formations)
+
+    # 目标分配
+    for i_stage in range(1, pos_formations.shape[0]):
+        pos_formations[i_stage, :] = Assign(pos_formations[i_stage-1, :], pos_formations[i_stage, :])
+    
+    center_obs = start_pos_center + vec_norm*2
+    obs = formation_line(center_obs, degree_line, 3, 4)
+    return pos_formations, obs
+
+
+
 def pursuit():
     '''围捕！
     '''
@@ -346,7 +449,7 @@ def pursuit():
 
 def main4ros():
 
-    formation_ros = FormationROS(3)
+    formation_ros = FormationWithTask(3)
     global task
 
     task_planners = [TaskBase(i+1) for i in range(3)]
@@ -360,6 +463,11 @@ def main4ros():
             # wa
             formation_ros.rate.sleep()
             continue
+        
+        # if not formation_ros.init_timestamp_flag or t1<formation_ros.init_timestamp:
+        #     rospy.logwarn('waiting for Task initial')
+        #     formation_ros.rate.sleep()
+        #     continue
 
         # task transition
         isTaskFinished = True
@@ -369,12 +477,17 @@ def main4ros():
                 isTaskFinished = False
                 break
         if isTaskFinished:
-            if task == 3:           # TODO debug mode
+            if task == 2:           # TODO debug mode. 仅仅运行到前进到障碍物的地方
                 print('Task all finished')
                 
                 formation_ros.rate.sleep()
                 continue
             else:
+                # if not formation_ros.judge_next_task(task):
+                #     print('waiting for next task start')
+                #     formation_ros.rate.sleep()
+                #     continue
+
                 task += 1
                 formation_ros.vehicle_states = [FormationState.running for i in range(n_car)]
                 formation_ros.vehicle_formation_stage = [0 for i in range(n_car)]
@@ -403,6 +516,7 @@ def main4ros():
         t2=time.time()
         print('总时间：', t2-t1)
         
+        formation_ros.calc_task_duration(task)
         formation_ros.rate.sleep()
 
     
@@ -411,6 +525,6 @@ def main4ros():
 if __name__ == '__main__':
     main4ros()
     # pos = load_scene_summon()
-    pos, obs = load_scene_battle_with_obstacle()
+    pos, obs = load_scene_battle()
     plot4test(pos,obs)
     

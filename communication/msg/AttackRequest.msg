@@ -1,0 +1,2 @@
+string[] attack_pairs
+

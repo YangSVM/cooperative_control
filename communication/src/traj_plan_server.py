@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+'''测试程序
+grpc2ros
+'''
 
 import rospy
 import math
@@ -19,7 +21,7 @@ import data_transf_pb2_grpc as pb2_grpc
 
 class Traj_Plan(pb2_grpc.DataTransfServiceServicer):
     def GuiJIGuiHua(self, request, context):
-        pub = rospy.Publisher('trajectory', Trajectory, queue_size=1)
+        pub = rospy.Publisher('/car1/local_trajectory', Trajectory, queue_size=1)
 
         rate = rospy.Rate(10)
 
