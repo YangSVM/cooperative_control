@@ -135,6 +135,29 @@ def extend_formation(x,y, theta):
     return x_res,y_res
 
 
+def formation_double_line(points_through, d_car, n_car):
+    ''' 通过点，往后垂直延伸，按照d_car放置
+    '''
+    points_through = np.array(points_through)
+    delta_pos = points_through[1, :] - points_through[0, :]
+    theta_norm = math.atan2(delta_pos[1], delta_pos[0]) + np.pi/2
+    d_norm = np.array([math.cos(theta_norm), math.sin(theta_norm)])
+
+    pos_formation  = np.zeros([n_car, 2])
+
+    for i_car in range(n_car):
+        n_d = i_car//2      # 整除
+        i_d = i_car%2       # 取余数
+        pos_formation[i_car, :] = points_through[i_d, :] + d_car*n_d*d_norm
+    
+    return pos_formation
+
 
 if __name__ == '__main__':
-    test_stagger()
+    # test_stagger()
+    points_through = [[0,0],[1,5]]
+    pos_formation = formation_double_line(points_through, 2, 5)
+    plt.figure(1)
+    plt.plot(pos_formation[:, 0], pos_formation[:, 1], 'ro')
+    plt.axis("equal")
+    plt.show()

@@ -5,7 +5,7 @@ wheelbase = 0.8  # wheel base: front to rear axle [m]
 wheeldist = 0.6  # wheel dist: left to right wheel [m]
 v_w = 0.70  # vehicle width [m]
 r_b = 0.145  # rear to back [m]
-r_f = wheelbase + 2* r_b  # rear to front [m]
+r_f = wheelbase +  r_b  # rear to front [m]
 t_r = 0.1425  # tire radius [m]
 t_w = 0.10  # tire width [m]
 

@@ -47,9 +47,9 @@ MAX_SPEED = 50/3.6 # maximum speed [m/s]
 MAX_ACCEL = 3.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 1  # maximum curvature [1/m]
 
-D_ROAD_W = 1.0  # road width sampling length [m]
-ROAD_WIDTH_START = 0
-ROAD_WIDTH_END = 1
+D_ROAD_W = 0.6  # road width sampling length [m]
+ROAD_WIDTH_START = -1.2
+ROAD_WIDTH_END = 1.2
 
 DT = 0.2  # time tick [s]
 # DT = 1
@@ -60,7 +60,7 @@ D_T_S = TARGET_SPEED   # target speed sampling length [m/s]
 # N_S_SAMPLE = 1  # sampling number of target speed
 N_S_SAMPLE = 10  # sampling number of target speed
 
-ROBOT_RADIUS = 0.5  # robot radius [m]
+ROBOT_RADIUS = 1  # robot radius [m]
 t_thre=1.5 #碰撞检测时间阈值[s]
 
 # cost weights
@@ -128,7 +128,7 @@ class FormationROS():
             traj = Trajectory()
             for i_rp in range(n_road_point):
                 rp = RoadPoint()
-                rp.x = v_path_x[i][i_rp]        # 注意x = y的转换
+                rp.x = v_path_x[i][i_rp]
                 rp.y = v_path_y[i][i_rp]
                 rp.v = v_speed[i][i_rp]
                 traj.roadpoints.append(rp)
@@ -409,7 +409,7 @@ def check_collision(fp, ob):
         d = [((ix - ob[i, 0]) ** 2 + (iy - ob[i, 1]) ** 2)
              for (ix, iy) in zip(fp.x, fp.y)]
 
-        collision = any([di <= ROBOT_RADIUS ** 2 for di in d])
+        collision = any([di <= (ROBOT_RADIUS/2) ** 2 for di in d])
 
         if collision:
             return False
@@ -448,7 +448,7 @@ def frenet_optimal_planning(csp, s0, c_speed, c_d, c_d_d, c_d_dd, ob, search_par
         print('none fplist')
 
     fplist = check_paths(fplist, ob)
-    if fplist is None:
+    if fplist is None or len(fplist) == 0:
         print('none fplist available')
     # t4 = time.time()
     # print(t3-t2, ' ', t4-t3)
@@ -479,7 +479,7 @@ def generate_target_course(x, y):
 
 
 # 碰撞检测2
-# 先假设匀速运动
+# 先假设匀速运动: TODO 仍然存在逻辑问题，不知如何解决
 def collision_avoid(local_trajs):
     x, y, v=[],[],[]
     n_car = len(local_trajs)
@@ -493,18 +493,29 @@ def collision_avoid(local_trajs):
 
     ins_condition=[]  # 存储插入情况的列表，每个元素的形式为[j,ind_s,ind_e]
 
-    # 对每个时间点进行碰撞检测
-    for ts in range(t_min):
-        for i in range(n_car-1):
-            for j in range(i+1, n_car):
-                if v[i][ts] == 0 or v[j][ts] ==0:
-                    break
-                d_ij = np.hypot(x[i][ts]-x[j][ts], y[i][ts]-y[j][ts])
-                if d_ij < ROBOT_RADIUS*2:
-                    ins_condition.append([i, j, ts])
-                    v[i][ts:] = 0
-                    rospy.logwarn('Collision avoidance! Car'+ str(i)+ ' stop!.' )
-                    continue
+    is_collision_free = True
+    for iter in range(10):  
+        # 最多检查10个循环，直到冲突完全消解
+        for ts in range(t_min):
+            # 对每个时间点进行碰撞检测
+            for i in range(n_car-1):
+                for j in range(i+1, n_car):
+                    # if v[i][ts] == 0 or v[j][ts] ==0:
+                    #     break
+                    d_ij = np.hypot(x[i][ts]-x[j][ts], y[i][ts]-y[j][ts])
+                    if d_ij < ROBOT_RADIUS*2:
+                        is_collision_free = False
+                        # 在碰撞点前几个点停车
+                        safe_ts = max(0, ts-5)
+                        ins_condition.append([i, j, ts])
+                        id_stop = j
+                        v[id_stop][safe_ts:] = 0
+                        x[id_stop][safe_ts:] = x[id_stop][safe_ts]
+                        y[id_stop][safe_ts:] = y[id_stop][safe_ts]
+                        rospy.logwarn('Collision avoidance! Car'+ str(j)+ ' stop at '+ str(0.1*ts) + '!' )
+                        continue
+        if is_collision_free:
+            break
 
     # 碰撞点t_thre进行停车。速度置为0.x,y不变
     # for con

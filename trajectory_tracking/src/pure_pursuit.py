@@ -37,7 +37,7 @@ class PurePursuit():
         self.preview_point = Point()
 
         # 输入 gnss, 规划的局部避撞轨迹
-        rospy.Subscriber('car/gps', Odometry,  self.compute_cmd)
+        rospy.Subscriber('gps', Odometry,  self.compute_cmd)
         rospy.Subscriber('local_trajectory', Trajectory, self.get_local_trajectory)
 
         # 输出控制指令
@@ -100,6 +100,13 @@ class PurePursuit():
 
         # find the current waypoint according to distance.
         id_current, distance_current = self.get_current_roadpoint(local_traj_xy, self.posture)
+
+        # 预瞄点太远直接停车
+        if distance_current > 2 :
+            self.cmd.data[0] = 0
+            self.cmd.data[1] = 0
+            return
+
 
         preview_distance = 1
         # find the preview roadpoint according to preview distance 

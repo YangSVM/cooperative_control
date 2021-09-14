@@ -11,6 +11,8 @@ from geometry_msgs.msg import Point
 from trajectory_tracking.msg import Trajectory
 from math import pi
 from geometry_msgs.msg import Pose
+from utils.draw_lqr import draw_car
+
 
 # 全局定义参数：总车辆数目
 n_car = 3
@@ -31,7 +33,7 @@ is_global_trajectory_ready_list = [False for i in range(n_car)]
 pose_states =  [Pose() for i in range(n_car)]
 is_gps_ready_list = [False for i in range(n_car)]
 
-wp = Trajectory()
+formation_points_traj = Trajectory()
 is_wp_ready = False
 
 boundary = np.array([[12.06,19.49],
@@ -45,20 +47,32 @@ boundary = np.array([[12.06,19.49],
     [13.70,14.47],
     [12.20,19.50]])
     
+def trajectory2np(trajectory):
+    n_points = len(trajectory.roadpoints)
+
+    path = np.zeros([n_points, 2])
+    for i in range(n_points):
+        path[i,0] = trajectory.roadpoints[i].x
+        path[i,1] = trajectory.roadpoints[i].y
+        if trajectory.roadpoints[i].v ==0:
+            safe_i_last = max([0, i-1])
+            path[i, :] = path[safe_i_last, :]
+
+    return path
 
 def sub_gps_states(msg, i):
     global is_gps_ready_list, pose_states
     is_gps_ready_list[i] = True
     pose_states[i].position.x = msg.pose.pose.position.x
     pose_states[i].position.y = msg.pose.pose.position.y
-
+    
     pose_states[i].orientation.z = msg.twist.twist.angular.z
 
 
 def get_wp(msg):
-    global is_wp_ready, wp
+    global is_wp_ready, formation_points_traj
     is_wp_ready = True
-    wp = msg
+    formation_points_traj = msg
 
 
 def transform(x, y, theta=None):
@@ -88,13 +102,17 @@ def get_global_trajectory(msg, id):
     global_trajectory_list[id] =  msg
     is_global_trajectory_ready_list[id] = True
 
-def get_path_xy(local_trajectory):
-    n_points = len(local_trajectory.roadpoints)
+def get_path_xy(trajectory, is_need_cut=True):
+    n_points = len(trajectory.roadpoints)
 
     path = np.zeros([n_points, 2])
     for i in range(n_points):
-        path[i,0] = local_trajectory.roadpoints[i].x
-        path[i,1] = local_trajectory.roadpoints[i].y
+        path[i,0] = trajectory.roadpoints[i].x
+        path[i,1] = trajectory.roadpoints[i].y
+        if is_need_cut:
+            if trajectory.roadpoints[i].v ==0:
+                safe_i_last = max([0, i-1])
+                path[i, :] = path[safe_i_last, :]
     return path
 
 
@@ -123,18 +141,18 @@ def visual():
     rospy.loginfo("Simulation: map loaded")
 
     vehicle_state_list = []
-    for i in range(n_car):
-        vehicleState = [0,0,0]
-        vehicle_state_list.append(vehicleState)
+    for i_car in range(n_car):
+        vehicle_pose_state = [0,0,0]
+        vehicle_state_list.append(vehicle_pose_state)
 
 
-    for i in range(n_car):
-        id = id_list[i]
+    for i_car in range(n_car):
+        id = id_list[i_car]
         # 输入控制量
-        rospy.Subscriber('car'+str(id)+'/purepusuit/preview_point', Point, getPrewierPoint, i)
-        rospy.Subscriber('car'+str(id)+'/local_trajectory', Trajectory, get_local_trajectory, i)
-        rospy.Subscriber('car'+str(id)+'/global_trajectory', Trajectory, get_global_trajectory, i)
-        rospy.Subscriber('car'+str(id)+'/gps', Odometry, sub_gps_states, i)
+        rospy.Subscriber('car'+str(id)+'/purepusuit/preview_point', Point, getPrewierPoint, i_car)
+        rospy.Subscriber('car'+str(id)+'/local_trajectory', Trajectory, get_local_trajectory, i_car)
+        rospy.Subscriber('car'+str(id)+'/global_trajectory', Trajectory, get_global_trajectory, i_car)
+        rospy.Subscriber('car'+str(id)+'/gps', Odometry, sub_gps_states, i_car)
 
     rospy.Subscriber('/temp_goal', Trajectory, get_wp)
 
@@ -150,49 +168,46 @@ def visual():
     
     while not rospy.is_shutdown():
         # plot simulation
-        plt.cla()
-        # plt.plot(map[:,2], map[:, 1], 'k--')
-        # plot_scene_wp([], [], ob)
-        # for i_ob in ob:
-        #     theta = np.linspace(0, 2*pi, 200)
-        #     x = i_ob[0] + 0.5*1 * np.cos(theta)
-        #     y = i_ob[1] + 0.5*1 * np.sin(theta)
-        #     # plt.plot(x, y, 'k-') # TODO
+        plt.clf()
 
-        # for i_wp in range(n_wp):
-        #     plt.plot(wp_x[i_wp], wp_y[i_wp], 'r*')
+        plt.plot(boundary[:,0], boundary[:,1], 'r-')
 
-        # if is_wp_ready:
-        #     path = get_path_xy(wp)
-        #     plt.plot(path[:,0], path[:,1], 'r*')
+        for i_car in range(n_car):
+            id = id_list[i_car]
 
-        for i in range(n_car):
-            id = id_list[i]
-
-            if is_gps_ready_list[i]:
-                vehicleState = pose_states[i]
-                plt.plot(vehicleState.position.x, vehicleState.position.y, 'bo')
+            if is_gps_ready_list[i_car]:
+                vehicle_pose_state = pose_states[i_car]
+                plt.plot(vehicle_pose_state.position.x, vehicle_pose_state.position.y, 'bo')
+                draw_car(vehicle_pose_state.position.x, vehicle_pose_state.position.y, vehicle_pose_state.orientation.z/180*np.pi, 0)
             
-            plt.plot(boundary[:,0], boundary[:,1], 'r-')
-            if  is_preview_point_ready_list[i]:
-                previewPoint = preview_point_list[i]
+            if  is_preview_point_ready_list[i_car]:
+                previewPoint = preview_point_list[i_car]
                 plt.plot(previewPoint.x, previewPoint.y, 'k*')
             
-            if is_local_trajectory_ready_list[i]:
-                path = get_path_xy(local_trajectory_list[i])
+            if is_local_trajectory_ready_list[i_car]:
+                path = get_path_xy(local_trajectory_list[i_car])
                 plt.plot(path[:,0], path[:,1], 'g.')
-            if is_global_trajectory_ready_list[i]:
-                path = get_path_xy(global_trajectory_list[i])
+            if is_global_trajectory_ready_list[i_car]:
+                path = get_path_xy(global_trajectory_list[i_car], is_need_cut=False)
                 plt.plot(path[:,0], path[:,1], 'k-')
+        if is_wp_ready:
+            wp_np = get_path_xy(formation_points_traj, is_need_cut=False)
+            plt.plot(wp_np[:, 0], wp_np[:, 1], 'r*')
 
         # plt.show()
-        plt.gca().set_aspect('equal', adjustable='box')
+        plt.axis('square')
 
         plt.pause(0.001)
 
         rate.sleep()
-    plt.show()
+    # plt.show()
 
 if __name__ == '__main__':
 
     visual()
+    # plt.figure(1)
+    # draw_car(0,0,0,0)
+
+    # plt.axis('square')
+    # plt.show()
+    # print('hold on')
