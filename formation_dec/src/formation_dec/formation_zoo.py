@@ -152,6 +152,32 @@ def formation_double_line(points_through, d_car, n_car):
     
     return pos_formation
 
+def formation_point(point, n_car):
+    ''' 返回多个重复点的
+    '''
+    pos_formations = np.ones([n_car, 2])
+    for i in range(n_car):
+        pos_formations[i, :] = np.array(point)
+    return pos_formations
+
+
+def calc_pass_order(formations, theta_deg):
+    '''给定角度。根据队形位置判定谁先通行。(队形位置越靠前的越先通行). theta 角度制
+    params:
+        formation: [n_car, 2]. 每辆车的位置
+        theta: .队形朝向(车头朝向)
+    returns:
+        pass_order: 
+    '''
+    # 投影看目标位置
+    theta = theta_deg/180*pi
+    theta_vec = np.array([math.cos(theta), math.sin(theta)])
+    dot_product = (formations * theta_vec).sum(axis=1)
+    pass_order = np.argsort(dot_product)
+    pass_order = pass_order[::-1]
+    return pass_order
+
+
 
 if __name__ == '__main__':
     # test_stagger()

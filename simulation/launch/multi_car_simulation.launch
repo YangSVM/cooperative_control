@@ -12,4 +12,12 @@
     <group ns="car5">
     <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
   </group>
+
+    <group ns="car3">
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
+  </group>
+    <group ns="car4">
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
+  </group>
+  
 </launch>

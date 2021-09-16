@@ -17,7 +17,7 @@ Author: Shi Gongchen, Yang Yibin
 
 """
 
-from threading import local
+from typing import List
 import rospy
 import numpy as np
 import copy
@@ -26,7 +26,7 @@ import math
 
 from math import pi
 import time
-from formation_zoo import *
+from formation_dec.formation_zoo import *
 from scipy.optimize import linear_sum_assignment
 from trajectory_tracking.msg import Trajectory, RoadPoint
 from nav_msgs.msg import Odometry
@@ -77,21 +77,24 @@ id_real = [2, 5]
 FormationState = Enum('FormationState', ('running', 'temp_goal', 'goal', 'waiting'))
 
 class FormationROS():
-    def __init__(self, n_car) -> None:
+    def __init__(self, n_car, car_ids:List):
+        ''' 
+        '''
         rospy.init_node("formation_core")
         self.n_car = n_car
-        # 调试的是第几辆车
-        id_list = [1,2, 5]
-        self.id_list = id_list
-        self.id_id_list_real = [0,1,2]        # id_list中，第几辆车是真车，其余车是虚拟车。即id_list[1],id_list[2](2,5号车)是真车
+
+
+        self.id_list = car_ids
+        self.id_id_list_real = [i for i in range(n_car)]        # id_list中，第几辆车是真车，其余车是虚拟车。即id_list[1],id_list[2](2,5号车)是真车
+
         # 发布车辆轨迹
-        self.pubs = [rospy.Publisher('car'+str(id_list[i])+'/local_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
-        self.pub_csps = [rospy.Publisher('car'+str(id_list[i])+'/global_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
+        self.pubs = [rospy.Publisher('car'+str(car_ids[i])+'/local_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
+        self.pub_csps = [rospy.Publisher('car'+str(car_ids[i])+'/global_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
         self.pub_wp =rospy.Publisher('/temp_goal', Trajectory, queue_size=1)
         self.pub_task_time = rospy.Publisher('task_time_remain', Float64MultiArray, queue_size=1)
         # 接收所有车辆的信息
         for i in range(n_car):
-            rospy.Subscriber('car'+str(id_list[i])+'/gps', Odometry,  self.sub_gps_states, i)
+            rospy.Subscriber('car'+str(car_ids[i])+'/gps', Odometry,  self.sub_gps_states, i)
 
         # 车辆状态
         self.pose_states = [Pose() for i in range(n_car)]
@@ -480,7 +483,7 @@ def generate_target_course(x, y):
 
 # 碰撞检测2
 # 先假设匀速运动: TODO 仍然存在逻辑问题，不知如何解决
-def collision_avoid(local_trajs):
+def collision_avoid(local_trajs, pass_order):
     x, y, v=[],[],[]
     n_car = len(local_trajs)
     for i in range(n_car):
@@ -508,7 +511,10 @@ def collision_avoid(local_trajs):
                         # 在碰撞点前几个点停车
                         safe_ts = max(0, ts-5)
                         ins_condition.append([i, j, ts])
-                        id_stop = j
+                        
+                        # 根据通行次序确定停哪辆车
+                        id_stop = j if pass_order[j] > pass_order[i] else i
+
                         v[id_stop][safe_ts:] = 0
                         x[id_stop][safe_ts:] = x[id_stop][safe_ts]
                         y[id_stop][safe_ts:] = y[id_stop][safe_ts]
@@ -544,7 +550,7 @@ def Assign(pos_start, pos_end):
     # print(cost_matrix)
     # print("assignment result=")
     # print(matches_i, matches_j)
-    x_end_assign,y_end_assgin=[0]*len(x_end),[0]*len(y_end)
+    x_end_assign, y_end_assgin=[0]*len(x_end),[0]*len(y_end)
 
     # 变换编号。使得 pos_start 中的第i行的车，指派到 pos_end_assign 第i行的位置上
     for mi, mj in zip(matches_i, matches_j):
@@ -552,29 +558,108 @@ def Assign(pos_start, pos_end):
         y_end_assgin[mi] = y_end[mj]
 
     pos_end_assign = np.array([x_end_assign, y_end_assgin]).T
-    return pos_end_assign
+
+    return pos_end_assign, matches_i, matches_j
 
 
+def cut_csp(csp:cubic_spline_planner.Spline2D, s0, delta_s=1.5):
+    s_end = s0+delta_s
+    s_max = csp.s[-1]
+    n_points = int(delta_s /0.1)
+    path_x, path_y, path_v = np.ones(n_points), np.ones(n_points), np.ones(n_points)*TARGET_SPEED
+    for i in range(n_points):
+        s = s0+i*0.1
+        s = min(s, s_max-1e-3)
+        path_x[i], path_y[i] = csp.calc_position(s)
+        
+    return path_x, path_y, path_v
 
 
-def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros: FormationROS, pos_formations_frenet, sample_basis=None):
+def sequential_passing(pos_formations, states, global_frenet_csps, pos_formations_frenet,
+                                                formation_ros: FormationROS,
+                                                ):
+    n_car = pos_formations.shape[1]
+    # wp_x :  n_car*n_x
+    path_x, path_y,path_v = [], [], []  # 各车依次路径点的x，y坐标及速度
+    n_car = len(global_frenet_csps)
+    csps = global_frenet_csps
+
+    trajs = generate_traj_by_csp(csps)
+    wp_traj = generate_traj_by_wp(pos_formations[:,:,0], pos_formations[:,:,1])
+    for i_car in range(n_car):
+        formation_ros.pub_csps[i_car].publish(trajs[i_car])
+    formation_ros.pub_wp.publish(wp_traj)
+    # 局部路径规划
+
+    vehicle_states = formation_ros.vehicle_states
+    vehicle_formation_stage = [0 for i in range(n_car)]         # 应该是每次都初始化
+    last_trajectory = formation_ros.last_trajectory
+
+    if states is None:
+        # time.sleep(5)           # waiting for gnss message
+        return
+    # 1. 先决定通行次序.
+    # 计算每辆车的stage
+    # 计算所有车的frenet坐标
+    frenet_car = np.ones([n_car, 2])
+        
+    for i_car in range(n_car):
+        csp = global_frenet_csps[i_car]
+        frenet_car[i_car, :] = cartesian2frenet(states[i_car].position.x, states[i_car].position.y, csp)
+        for i_stage in range(pos_formations.shape[0]): 
+            if frenet_car[i_car, 0] > pos_formations_frenet[i_stage, i_car, 0] - 1e-2:
+                vehicle_formation_stage[i_car] = i_stage
+
+    # 计算通行次序
+    vehicle_formation_stage = np.array(vehicle_formation_stage)
+    legal_cars = vehicle_formation_stage==0
+    s_car2inter = frenet_car[:, 0] -  pos_formations_frenet[1, :, 0]
+    s_car2inter[~legal_cars] = -1000
+    car2pass = -1
+    
+    priority = np.argmax(s_car2inter)
+    if s_car2inter[priority] <0:
+        car2pass = priority
+
+
+    # 阶段小于1的车， 按顺序启动。已经阶大于1的车，匀速前进
+    for i_car in range(n_car):
+        
+        if vehicle_formation_stage[i_car]>0:
+            tmp_x, tmp_y, tmp_v = cut_csp(global_frenet_csps[i_car], frenet_car[i_car, 0])
+        else:
+            if i_car == car2pass:
+                tmp_x, tmp_y, tmp_v = cut_csp(global_frenet_csps[i_car], frenet_car[i_car, 0])
+            else:
+                tmp_x = np.ones(15) * states[i_car].position.x
+                tmp_y = np.ones(15) * states[i_car].position.y
+                tmp_v = np.ones(15) * states[i_car].orientation.z
+
+        path_x.append(tmp_x)
+        path_y.append(tmp_y)
+        path_v.append(tmp_v)
+
+    
+    return path_x, path_y, path_v
+
+
+def local_traj_gen(pos_formations, pass_orders, ob, states, 
+                                        global_frenet_csp, 
+                                        formation_ros: FormationROS, 
+                                        pos_formations_frenet, 
+                                        sample_basis=None,
+                                        critical_state_selector: List =[]
+                                        ):
     ''' 计算各车路径的函数，输入为全局路径需要经过的路点(每个路点为队形对应点)、障碍物位置
     params:
         pos_formations: np.array. [n_stage, n_car, 2]. 
+        csp: 各车的全局路径
     '''
 
     # wp_x :  n_car*n_x
     path_x, path_y,path_v = [], [], []  # 各车依次路径点的x，y坐标及速度
-    csps  = []
-    n_car = pos_formations.shape[1]
-
-    # 全局路径规划，不考虑障碍物
-    for i_car in range(n_car):
-        t1 = time.time()
-        csp = cubic_spline_planner.Spline2D(pos_formations[:, i_car,0], pos_formations[:, i_car,1])
-        csps.append(csp)
-        t2 = time.time()
-        # print('全局路径规划时间: ', t2-t1)
+    n_car = len(global_frenet_csp)
+    csps = global_frenet_csp
 
     trajs = generate_traj_by_csp(csps)
     wp_traj = generate_traj_by_wp(pos_formations[:,:,0], pos_formations[:,:,1])
@@ -589,9 +674,9 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
     paths = [[] for i in range(n_car)]                                          # 当前规划的轨迹
 
     vehicle_states = formation_ros.vehicle_states
+    vehicle_formation_stage = formation_ros.vehicle_formation_stage
     last_trajectory = formation_ros.last_trajectory
 
-    vehicle_formation_stage = formation_ros.vehicle_formation_stage
 
     # 1. 首先规划出3条路径
     if states is None:
@@ -657,10 +742,12 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
             tmp_v = path_v[i_car][:]
             # 速度直接置为零
             path_v[i_car][:]= np.zeros(tmp_v.shape)
-            # 其余x,y等信息不变。保留第一个点
-            safe_i = min(len(path_x[i_car])-1, 5)
-            path_x[i_car][safe_i:] = np.ones(path_x[i_car][safe_i:].shape)*path_x[i_car][safe_i]
-            path_y[i_car][safe_i:] = np.ones(path_y[i_car][safe_i:].shape)*path_y[i_car][safe_i]
+            path_x[i_car][:] = np.ones(path_x[i_car].shape) * (states[i_car].position.x + 1e-3)
+            path_y[i_car][:] = np.ones(path_y[i_car].shape) * (states[i_car].position.y + 1e-3)
+            # x,y也需要裁剪
+            # safe_i = min(len(path_x[i_car])-1, 5)
+            # path_x[i_car][safe_i:] = np.ones(path_x[i_car][safe_i:].shape)*path_x[i_car][safe_i]
+            # path_y[i_car][safe_i:] = np.ones(path_y[i_car][safe_i:].shape)*path_y[i_car][safe_i]
             local_trajs_oral[i_car][0] = path_x[i_car][:]
             local_trajs_oral[i_car][1] = path_y[i_car][:]
             local_trajs_oral[i_car][2] = path_v[i_car][:]
@@ -694,7 +781,7 @@ def local_traj_gen(pos_formations, ob, states, global_frenet_csp, formation_ros:
 
     # 2. 速度规划。考虑车辆之间避撞
     t_traj_start = time.time()
-    path_x, path_y, path_v = collision_avoid(local_trajs_oral)
+    path_x, path_y, path_v = collision_avoid(local_trajs_oral, pass_orders[min(vehicle_formation_stage)])
     t_traj_end = time.time()
     # print('避撞计算时间：', t_traj_end- t_traj_start)
 

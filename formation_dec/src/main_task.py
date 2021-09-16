@@ -16,79 +16,27 @@ v 1.0
 1. 编队保持状态的反馈控制：(根据现有位置和理想编队位置的偏差，发布速度指令进行控制)
 
 """
+from os import isatty
+from typing import List
 from formation_core import FormationState
 
-from scipy.optimize.optimize import vecnorm
 from formation_core import Assign
 import rospy
 import numpy as np
 from trajectory_tracking.msg import Trajectory,RoadPoint
-from formation_zoo import *
+from formation_dec.formation_zoo import *
 from math import pi
-from formation_core import local_traj_gen, FormationROS, cartesian2frenet
+from formation_core import local_traj_gen, FormationROS, cartesian2frenet, sequential_passing
 import cubic_spline_planner
 import time
 import math
 from communication.msg import ExecInfoRequest, TasksRequest, AttackRequest, TaskEI
-
-
-PI = pi
-V = 1.5         # m/s
-MIN_R = 0.8/np.tan(20/180*PI)           # 2.2米左右
-task = 1            # 全局任务信息，初始化为1
-n_car = 3
-car_id = [1,2,5]
-d_car = 2.5
-
-
-# 前三个为障碍物锥桶，后三个为后方的敌方智能体
-obs = np.array([[ -7.49,	16.28],
-    [-10.76,	16.55],
-    [-11.86,	13.48],
-    [-7.98,17.21],
-    [-11.36,17.38],
-    [-12.51,14.23]])
-
-# 演示场景中，我方静止队形时的位置
-battle_pos=np.array([
-    [-3.26,11.59],
-    [-5.77,10.53],
-    [-7.87,8.98],
-])
-battle_theta = -157.1848
-battle_theta_norm = 90 + battle_theta
-
-# 场地边界
-boundary = np.array([[12.06,19.49],
-    [4.51,19.77],
-    [-22.23,19.89],
-    [-22.68,-0.44],
-    [-15.10,-18.49],
-    [-6.83,-22.89],
-    [11.80,-22.88],
-    [13.49,-10.47],
-    [13.70,14.47],
-    [12.20,19.50]])
-
-
-# 集结队形参数调整
-r_u_turn = 3
-r = 12
-
-center_line = np.array([
-    [0,r+5],
-    [0, r+5 -7],
-    [0, -r + r_u_turn],
-    [r_u_turn, -r],
-    [2*r_u_turn, -r + r_u_turn],
-    [2*r_u_turn, -r + r_u_turn + 2],
-])
-    
+from formation_dec.config_formation import *
 
 
 class FormationWithTask(FormationROS):
-    def __init__(self, n_car):
-        super(FormationWithTask, self).__init__(n_car)
+    def __init__(self, n_car, car_ids):
+        super(FormationWithTask, self).__init__(n_car, car_ids)
         rospy.Subscriber('TasksRequest', TasksRequest, self.task_request_callback)
         rospy.Subscriber('AttackRequest', AttackRequest, self.attack_request_callback)
         # time step for start
@@ -242,91 +190,75 @@ class TaskBase():
     def __init__(self, i_task, states=None, insert_pos=0):
         global obs
         self.task = i_task
-        if i_task==1:
-            pos_formations = load_scene_summon()
-        elif i_task==2:
-            pos_formations = load_scene_prebattle()
-        elif i_task==3:
+        self.critical_state_selector = None
+        if i_task==1:           # 集结
+            pos_formations, self.theta_degs, self.critical_state_selector = load_scene_summon()
+        elif i_task==2:         # 到锥桶前
+            pos_formations, self.theta_degs = load_scene_prebattle()
+        elif i_task==3:         # 通过障碍
             # pos_formations, obs = load_scene_battle()
-            pos_formations = load_avoid_summon()
+            # pos_formations,  self.theta_degs = load_avoid_summon()
+            pos_formations,  self.theta_degs = load_line_through()
+
             # plt.plot(pos_formations[..., 0], pos_formations[...,1], 'r*')
             # plt.axis('square')
             # plt.show()
-        elif i_task==4:
-            pursuit()
         else:
             print('Unkown Task type')
             return
         self.obs = obs
+
         self.pos_formations = pos_formations
-        self.global_frenet_csp = 0          # 没有用到的特征。之后可能删除掉。
 
         # 队形点的frenet坐标。这个时间为20ms，得提前算
-        self.pos_formations_frenet = self.calc_pos_frenet(pos_formations)
-        self.is_reload = False
-
-    def reload_scene(self, task_id, states):
-        if task_id == 3:
-            # pos_formations, obs = load_scene_battle(direction)
-            pos_formations = load_avoid_summon()
-            self.obs = obs
-            self.pos_formations = pos_formations
-            self.pos_formations_frenet = self.calc_pos_frenet(pos_formations)
+        # self.pos_formations_frenet = self.calc_pos_frenet(pos_formations, self.global_frenet_csps)
+        # 有的场景需要重新进行匈牙利指派
+        self.is_repost_process = False
 
 
-    def calc_pos_frenet(self, pos_formations):
-        # 计算队形点的s-d frenet坐标。统一运算，避免重复计算
+    def calc_pos_frenet(self, pos_formations, global_frenet_csps):
+        # 计算队形点的s-d frenet坐标。统一运算，避免重复计算：大量减少时间复杂度
         pos_formations_frenet = np.empty(pos_formations.shape)
         for i_car in range(n_car):
-            csp = cubic_spline_planner.Spline2D(pos_formations[:, i_car,0], pos_formations[:, i_car,1])
+            csp = global_frenet_csps[i_car]
             for i_stage in range(pos_formations.shape[0]):
                 sd_i_stage = cartesian2frenet(pos_formations[i_stage, i_car, 0], pos_formations[i_stage, i_car, 1], csp)
                 pos_formations_frenet[i_stage, i_car, :] = sd_i_stage
         
         return pos_formations_frenet
 
-    def recalc_pos_frenet(self, states):
-        ''' 编队
+    def repost_process(self, states):
+        ''' 重新进行后处理。每个阶段需要重新拼接
         '''
-        # 将states转成numpy
+        # 将states转成numpy. 并进行拼接
         n_car = self.pos_formations.shape[1]
-        states_np = np.empty([n_car, 2])
+        states_np = np.empty([1, n_car, 2])
         for i_car in range(n_car):
-            states_np[i_car, 0] = states[i_car].position.x
-            states_np[i_car, 1] = states[i_car].position.y
-        pos_formations = self.pos_formations.copy()
-        pos_formations_frenet = np.empty(pos_formations.shape)
+            states_np[0, i_car, 0] = states[i_car].position.x
+            states_np[0, i_car, 1] = states[i_car].position.y
 
-        pos_formations[0, :] = Assign(states_np, pos_formations[0, :])
-        # 重新分配
-        for i_stage in range(1, pos_formations.shape[0]):
-            pos_formations[i_stage, :] = Assign(pos_formations[i_stage-1, :], pos_formations[i_stage, :])
+        pos_formations_extend = np.concatenate((states_np, self.pos_formations), axis=0)
 
-        # 计算队形点的s-d frenet坐标。统一运算，避免重复计算
-        for i_car in range(n_car):
-            csp = cubic_spline_planner.Spline2D(pos_formations[:, i_car,0], pos_formations[:, i_car,1])
-            for i_stage in range(pos_formations.shape[0]):
-                sd_i_stage = cartesian2frenet(pos_formations[i_stage, i_car, 0], pos_formations[i_stage, i_car, 1], csp)
-                pos_formations_frenet[i_stage, i_car, :] = sd_i_stage
-        
-        self.pos_formations = pos_formations.copy()
-        self.pos_formations_frenet = pos_formations_frenet
+        self.pos_formations, self.global_frenet_csps, self.pass_orders  = scene_post_process(pos_formations_extend, 
+                                                            self.theta_degs,global_frenet_csps=[], critical_state_selector=self.critical_state_selector)
+
+
+        self.pos_formations_frenet = self.calc_pos_frenet(self.pos_formations, self.global_frenet_csps)
+
 
     def plan(self, states, formation_ros: FormationROS):    
         '''决策规划。根据当前state生成一条进行符合轨迹的
 
         '''
-
-        # 分成两阶段进行：第一阶段初始化，后续持续进行
-        # 设计编队集合点 。一字队形->三角队形，一字队形。
         sample_basis = None
-        if task == 3:
-            sample_basis = []
-            if self.is_reload == False:
-                self.is_reload = True
-                self.recalc_pos_frenet(states)
-
-        path_x, path_y, path_v = local_traj_gen(self.pos_formations, self.obs, states, self.global_frenet_csp, formation_ros, self.pos_formations_frenet, sample_basis)
+        if not self.is_repost_process:
+            self.is_repost_process = True
+            self.repost_process(states)
+        
+        if self.task == 3:
+            path_x, path_y, path_v = sequential_passing(self.pos_formations, states, self.global_frenet_csps, self.pos_formations_frenet,  formation_ros)
+        else:
+            path_x, path_y, path_v = local_traj_gen(self.pos_formations, self.pass_orders, self.obs, states, self.global_frenet_csps, formation_ros, self.pos_formations_frenet, sample_basis)
 
         return path_x, path_y, path_v
 
@@ -343,6 +275,53 @@ def plot4test(pos_formations, obs):
     plt.show()
     
 
+def scene_post_process(pos_formations:np.ndarray, theta_degs, critical_state_selector:List = None, global_frenet_csps:List = [], is_include_ego=True):
+    '''编辑场景后需要的后处理。包括匈牙利指派，生成全局路径，提取队形关键阶段点（提前到达的车辆需要等后续车辆）
+        得出通行次序。
+    params:
+        pos_formations: 自车当前状态+编辑的队形点
+        critical_state_selector: list. 关键点是当中的哪几个. 如果是默认值，则全选
+        global_frenet_csps： 全局轨迹。如果是默认值[]，则根据 pos_formation生成全局轨迹；如果非空，则是repost_process.
+            此时第一个阶段点是车辆目前状态，必须忽略(目前状态和第一个阶段点太近，样条曲线稳定性太差)
+    '''
+
+    # 计算通行次序。从1开始。pass_orders的长度比控制点数目少
+    pass_orders = []
+    for i_stage in range(1, pos_formations.shape[0]-1):
+        pass_order = calc_pass_order(pos_formations[i_stage+1, ...], theta_degs[i_stage])
+        pass_orders.append(pass_order)
+    pass_orders = np.array(pass_orders)
+
+    # 目标分配
+    for i_stage in range(1, pos_formations.shape[0]):
+        pos_formations[i_stage, :], ori_id, sorted_id= Assign(pos_formations[i_stage-1, :], pos_formations[i_stage, :] )
+        if i_stage >  pos_formations.shape[0]-1 or i_stage<2:
+            continue
+        pass_orders[i_stage-2, ori_id] = pass_orders[i_stage-2, sorted_id]
+
+    # 生成全局路径，并设置关键编队点
+    n_car = pos_formations.shape[1]
+
+    if is_include_ego:
+        # 如果没有输入 global_frenet_csps，则直接根据 pos_formations生成
+        start_id = 1
+    else:
+        # 如果输入非空，需要重新进行排列。忽略第一个个队形点（自车状态点）
+        start_id = 0
+
+    global_frenet_csps = []
+    for i_car in range(n_car):
+        csp = cubic_spline_planner.Spline2D(pos_formations[start_id:, i_car,0], pos_formations[start_id:, i_car,1])
+        global_frenet_csps.append(csp)
+    
+    #
+    # 关键点采集。先去除自车状态，再选择原来的点
+    pos_formations = pos_formations[1:, ...]
+    if critical_state_selector is None:
+        critical_state_selector = [i for i in range(pos_formations.shape[0])]
+    pos_formations = pos_formations[critical_state_selector,...]
+        
+    return pos_formations, global_frenet_csps, pass_orders
 
 
 def load_scene_summon():
@@ -352,26 +331,35 @@ def load_scene_summon():
     t1 = time.time()
 
     pos_formations = []
+    pass_orders = []
+
     pos_line =formation_line(center_line[0, :], 0, n_car, d_car)
     pos_formations.append(pos_line)
 
     # 三角队形匀速开始
-    pos_tri = formation_triangle(center_line[1, :],- 90,n_car,  d_car)
+    # 三角队形输入
+    if n_car%3 == 0 :
+        n_edge_car = n_car//3
+    else:
+        n_edge_car = n_car//3 + 1
+    # 外接圆半径计算。原则：每条边上车辆距离应该是定值
+    r_tri = (d_car * n_edge_car)/math.sqrt(3) * math.sqrt(3)
+    pos_tri = formation_triangle(center_line[1, :],- 90,n_car,  r_tri)
     pos_formations.append(pos_tri)
 
     # 三角队形匀速控制点
     n_contrl = 3
     d_dy = (center_line[2, :]- center_line[1, :])/(n_contrl + 1)
     for i_contrl in range(n_contrl):
-        pos_constant_ = formation_triangle(center_line[1, :]+d_dy*(i_contrl+1) ,- 90,n_car,  d_car)
+        pos_constant_ = formation_triangle(center_line[1, :]+d_dy*(i_contrl+1) ,- 90,n_car,  r_tri)
         pos_formations.append(pos_constant_)
 
     # 匀速运动结束位置
-    pos_tri_end = formation_triangle(center_line[2, :], -90,n_car,  d_car)
+    pos_tri_end = formation_triangle(center_line[2, :], -90,n_car,  r_tri)
     pos_formations.append(pos_tri_end)
     # 转弯中间位置
-    pos_turn = formation_triangle(center_line[3, :], 0,n_car,  d_car)
-    pos_formations.append(pos_turn)
+    # pos_turn = formation_triangle(center_line[3, :], 0,n_car,  r_tri)
+    # pos_formations.append(pos_turn)
     # 结束点位置
     pos_end = formation_line(center_line[4, :], 0, n_car, d_car)
     pos_formations.append(pos_end)
@@ -381,14 +369,16 @@ def load_scene_summon():
    
     # pos_formations: (n_formation, n_car, 2)。表示共有几个队形阶段。
     pos_formations = np.array(pos_formations)
+    theta_degs = [-90 for i in range(pos_formations.shape[0] - 3)]
+    theta_degs = theta_degs + [0, 90, 90]
+    
 
-    # 目标分配
-    for i_stage in range(1, pos_formations.shape[0]):
-        pos_formations[i_stage, :] = Assign(pos_formations[i_stage-1, :], pos_formations[i_stage, :])
+    critical_state_selector = [0,1,-1]
+    # pos_state_formations, global_frenet_csps, pass_orders = scene_post_process(pos_formations, theta_degs,global_frenet_csps=[])
 
     t2 = time.time()
     print('previous prepare time: ', t2-t1)
-    return pos_formations
+    return pos_formations, theta_degs, critical_state_selector
 
 
 def load_scene_prebattle():
@@ -434,12 +424,11 @@ def load_scene_prebattle():
 
     # pos_formations: (n_formation, n_car, 2)。表示共有几个队形阶段。
     pos_formations = np.array(pos_formations)
+    theta_degs = [battle_theta for i in range(pos_formations.shape[0])]
 
-    # 目标分配
-    for i_stage in range(1, pos_formations.shape[0]):
-        pos_formations[i_stage, :] = Assign(pos_formations[i_stage-1, :], pos_formations[i_stage, :])
+    # pos_state_formations, global_frenet_csps, pass_orders = scene_post_process(pos_formations, global_frenet_csps=[], theta_degs=theta_degs)
 
-    return pos_formations
+    return pos_formations, theta_degs
     
 
 def load_avoid_summon():
@@ -468,7 +457,7 @@ def load_avoid_summon():
     pos_through  = formation_double_line(pos_through_mid, d_car, n_car)
     pos_formations.append(pos_through)
 
-    # 加一个通过障碍物的队形
+    # 加一个通过障碍物的队形: 通过延伸
     delta_pos = pos_through[1, :] - pos_through[0, :]
     theta = math.atan2(delta_pos[1], delta_pos[0]) 
     theta_norm = theta - np.pi/2
@@ -476,22 +465,73 @@ def load_avoid_summon():
     d_theta = np.array([math.cos(theta), math.sin(theta)])
 
     pos_through_next = pos_through + d_norm * 2 + d_theta *(- 0.1)
-    pos_formations.append(pos_through_next)
+    # pos_formations.append(pos_through_next)
+
+    # 加一个通过障碍物的队形: 通过增加直线
+    
+    pos_through_line = formation_line(obs[1, :]+d_norm*3.5, 0, n_car, d_car)
+    pos_formations.append(pos_through_line)
 
     # 返回集结点的队形
     pos_line =formation_line(center_line[0, :], 0, n_car, 2)
     pos_formations.append(pos_line)
 
-
     pos_formations = np.array(pos_formations)
-    # 目标分配
-    for i_stage in range(1, pos_formations.shape[0]):
-        pos_formations[i_stage, :] = Assign(pos_formations[i_stage-1, :], pos_formations[i_stage, :])
-    return pos_formations
+    theta_degs = [battle_theta-90 for i in range(pos_formations.shape[0]-2)]
+    theta_degs.append(0)
+    theta_degs.append(-90)
+
+    # pos_state_formations, global_frenet_csps, pass_orders = scene_post_process(pos_formations, global_frenet_csps=[],theta_degs=theta_degs)
+
+    return pos_formations, theta_degs
+
+
+def load_line_through():
+    '''用直线队列方法通过障碍物
+    '''
+    global battle_pos, battle_theta, battle_theta_norm, obs
+    pos_formations = []
+
+    # 上一阶段的结束队形
+    pos_start_center = np.copy(battle_pos[1, :])
+    isAttackLeft = 1
+    d_theta = 20
+    d_pos_x = d_car/2
+    if isAttackLeft==1:
+        print('attack left')
+        d_pos_x = -d_pos_x
+    else:
+        print('attack right')
+        d_theta  = - d_theta
+    pos_start = formation_line(pos_start_center+ [-d_pos_x, 0], battle_theta-d_theta, n_car, d_car)
+    pos_formations.append(pos_start)
+
+    # 围绕障碍物的队形
+    # 单列通过。每列中心是障碍物中心
+    pos_through_mid = (obs[0, :] + obs[1, :])/2
+    pos_through  = formation_point(pos_through_mid, n_car)
+    
+    pos_formations.append(pos_through)
+
+    # 北尽头拐弯处
+    theta_norm = (battle_theta_norm)/180*pi
+    d_norm =  np.array([math.cos(theta_norm), math.sin(theta_norm)])
+    point_north_turn = pos_through_mid+d_norm*3.5
+    pos_north_turn = formation_point(point_north_turn, n_car)
+    pos_formations.append(pos_north_turn)
+
+    # 返回集结点的队形
+    pos_line =formation_line(center_line[0, :], 0, n_car, 2)
+    pos_formations.append(pos_line)
+    pos_formations = np.array(pos_formations)
+
+    theta_degs = np.array([battle_theta_norm,battle_theta_norm, battle_theta_norm, -90])
+    
+    return pos_formations, theta_degs
 
 
 def load_scene_battle(direction=1):
-    ''' 打击！通过锥桶逐个打击.障碍物。锥桶位置都修改。暂定只保留
+    ''' [暂时弃用].打击！通过锥桶逐个打击.障碍物。锥桶位置都修改。暂定只保留
     '''
     pos_formations = []
     global battle_pos
@@ -524,14 +564,9 @@ def load_scene_battle(direction=1):
 
 
 
-def pursuit():
-    '''围捕！
-    '''
-    pass
-
 def main4ros():
 
-    formation_ros = FormationWithTask(3)
+    formation_ros = FormationWithTask(n_car, car_ids)
     global task
 
     task_planners = [TaskBase(i+1) for i in range(3)]
@@ -552,7 +587,7 @@ def main4ros():
         #     continue
 
         # task transition
-        isTaskFinished = True
+        isTaskFinished = True       # 当前子任务是否完成
         for i_car in range(n_car):
             current_state =formation_ros.vehicle_states[i_car]
             if  current_state != FormationState.goal and current_state != FormationState.waiting:
@@ -565,29 +600,18 @@ def main4ros():
                 formation_ros.rate.sleep()
                 continue
             else:
-                # if not formation_ros.judge_next_task(task):
-                #     print('waiting for next task start')
-                #     formation_ros.rate.sleep()
-                #     continue
-
                 task += 1
                 formation_ros.vehicle_states = [FormationState.running for i in range(n_car)]
                 formation_ros.vehicle_formation_stage = [0 for i in range(n_car)]
-                task_planners[task].recalc_pos_frenet(states)
 
         task_name = ['侦查', '集结', '打击','最终集结']
         print('-'*30,'Task :', task_name[task], '-'*30)
         if task ==0:
             traj1, traj2, traj3 = task_planners[task]
-        elif task==1:
+        elif task in [1,2,3]:
+            path_x, path_y, path_v = task_planners[task].plan(states, formation_ros)
 
-            path_x, path_y, path_v = task_planners[task].plan(states, formation_ros)
-        elif task==2:
-            path_x, path_y, path_v = task_planners[task].plan(states, formation_ros)
-        elif task==3:
-            path_x, path_y, path_v = task_planners[task].plan(states, formation_ros)
-        elif task==4:
-            pursuit()
+
         if task !=0 :
             #  非循迹
             formation_ros.publish(path_x, path_y, path_v )
@@ -606,7 +630,6 @@ def main4ros():
 
 if __name__ == '__main__':
     main4ros()
-    # pos = load_scene_summon()
     # pos, obs = load_scene_battle()
     # plot4test(pos,obs)
     

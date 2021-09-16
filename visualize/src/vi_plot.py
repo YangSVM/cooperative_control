@@ -12,11 +12,9 @@ from trajectory_tracking.msg import Trajectory
 from math import pi
 from geometry_msgs.msg import Pose
 from utils.draw_lqr import draw_car
+from formation_dec.config_formation import *
 
 
-# 全局定义参数：总车辆数目
-n_car = 3
-id_list = [1,2, 5]
 
 # 全局变量。
 preview_point = Point(0,0,0)
@@ -102,7 +100,7 @@ def get_global_trajectory(msg, id):
     global_trajectory_list[id] =  msg
     is_global_trajectory_ready_list[id] = True
 
-def get_path_xy(trajectory, is_need_cut=True):
+def get_path_xy(trajectory, is_need_cut=False):
     n_points = len(trajectory.roadpoints)
 
     path = np.zeros([n_points, 2])
@@ -147,7 +145,7 @@ def visual():
 
 
     for i_car in range(n_car):
-        id = id_list[i_car]
+        id = car_ids[i_car]
         # 输入控制量
         rospy.Subscriber('car'+str(id)+'/purepusuit/preview_point', Point, getPrewierPoint, i_car)
         rospy.Subscriber('car'+str(id)+'/local_trajectory', Trajectory, get_local_trajectory, i_car)
@@ -173,7 +171,7 @@ def visual():
         plt.plot(boundary[:,0], boundary[:,1], 'r-')
 
         for i_car in range(n_car):
-            id = id_list[i_car]
+            id = car_ids[i_car]
 
             if is_gps_ready_list[i_car]:
                 vehicle_pose_state = pose_states[i_car]

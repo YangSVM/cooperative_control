@@ -4,24 +4,21 @@
 v2.0 输入输出画图均采用右手系
 '''
 import matplotlib.pyplot as plt
-from utils.draw_lqr import draw_car
 import numpy as np
 import rospy
 from std_msgs.msg import Int16MultiArray
 from nav_msgs.msg import Odometry
 import math
 from utils.config_control import *
-import os
-import sys
 import math
 from enum import Enum
 from geometry_msgs.msg import Point
 from trajectory_tracking.msg import Trajectory
 from math import pi
 
-# 全局定义参数：总车辆数目
-n_car = 3
-id_list = [1,2,5]
+from formation_dec.formation_zoo import *
+from formation_dec.config_formation import *
+
 
 # 全局变量。
 preview_point = Point(0,0,0)
@@ -37,17 +34,6 @@ is_global_trajectory_ready_list = [False for i in range(n_car)]
 wp_traj = Trajectory() 
 is_wp_ready = False
 
-
-boundary = np.array([[12.06,19.49],
-    [4.51,19.77],
-    [-22.23,19.89],
-    [-22.68,-0.44],
-    [-15.10,-18.49],
-    [-6.83,-22.89],
-    [11.80,-22.88],
-    [13.49,-10.47],
-    [13.70,14.47],
-    [12.20,19.50]])
 
 class Gear(Enum):
     GEAR_DRIVE = 1
@@ -223,30 +209,41 @@ def simulation():
     # x,y,yaw.右手系
     vehicle_state_list = []
 
-    task = 1
+    global task
     if task == 1:
 
+        pos_line =formation_line(center_line[0, :], 0, n_car, d_car)
         state_map_origin = [2 ,17,-90]    
         # state_map_origin = [2 ,-8,-90]    # fast  test
         # state_map_origin = [-2, 8,-90]  # field test
 
         for i in range(n_car):
-            vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
+            # vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
+            vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], -pi/2)
             vehicle_state_list.append(vehicleState)
 
     if task == 3:
-        start_pos = np.array([[-3,11],
-            [-5,10],
-            [-7,9],
-        ])
+        global battle_pos, battle_theta, battle_theta_norm
+        pos_start_center = np.copy(battle_pos[1, :])
+        isAttackLeft = 1
+        d_theta = 20
+        d_pos_x = d_car/2
+        if isAttackLeft==1:
+            print('attack left')
+            d_pos_x = -d_pos_x
+        else:
+            print('attack right')
+            d_theta  = - d_theta
+        pos_start = formation_line(pos_start_center+ [-d_pos_x, 0], battle_theta-d_theta, n_car, d_car)
+
         for i in range(n_car):
-            vehicleState = VehicleState(start_pos[i, 0], start_pos[i, 1], math.atan2(2, -1) )
+            vehicleState = VehicleState(pos_start[i, 0], pos_start[i, 1], math.atan2(2, -1) )
             vehicle_state_list.append(vehicleState)
     
 
 
     for i in range(n_car):
-        id = id_list[i]
+        id = car_ids[i]
         # 输入控制量
         rospy.Subscriber('car'+str(id)+'/control_cmd',Int16MultiArray, vehicle_update, vehicle_state_list[i])
         rospy.Subscriber('car'+str(id)+'/purepusuit/preview_point', Point, getPrewierPoint, i)
@@ -255,25 +252,11 @@ def simulation():
         rospy.Subscriber('/temp_goal', Trajectory, get_wp)
 
     # 输出GPS坐标
-    state_pubs = [rospy.Publisher('car'+str(id)+'/gps', Odometry, queue_size=1) for id in id_list]
+    state_pubs = [rospy.Publisher('car'+str(id)+'/gps', Odometry, queue_size=1) for id in car_ids]
 
     rate = rospy.Rate(10)
 
-    ob = np.array([
-                [10,12],
-                [10,8],
-                [25,8],
-                [25,14],
-                [25,11]
-                ])
-    
-    # ob =np.array([[ -3.21114562,  15.36656315]
-    #    [ -6.78885438,  13.57770876],
-    #    [-10.36656315,  11.78885438]])
 
-    # ob =np.array([[-2.31671843, 13.57770876],
-    #    [-5.89442719, 11.78885438],
-    #    [-9.47213595, 10.        ]])
     while not rospy.is_shutdown():
         # plot simulation
         # plt.cla()
@@ -284,12 +267,12 @@ def simulation():
         #     x = i_ob[0] + 0.5*1 * np.cos(theta)
         #     y = i_ob[1] + 0.5*1 * np.sin(theta)
         #     plt.plot(x, y, 'k-')
-        plt.plot(ob[:, 0], ob[:,1], 'bo')
+        # plt.plot(ob[:, 0], ob[:,1], 'bo')
         # for i_wp in range(n_wp):
         #     plt.plot(wp_x[i_wp], wp_y[i_wp], 'r*')
 
         for i in range(n_car):
-            id = id_list[i]
+            id = car_ids[i]
             vehicleState = vehicle_state_list[i]
             gps_msg = vehicleState.GetGps()
             state_pubs[i].publish(gps_msg)
