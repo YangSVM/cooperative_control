@@ -82,8 +82,9 @@ def formation_triangle(center,theta,n_car, r):
     '''
     target_x,target_y=[],[]
     theta=theta*pi/180
+    min_edge = min(n_car, 3)        # 支持两辆车编队
     # 生成A,B,C三点坐标
-    for i in range(3):
+    for i in range(min_edge):
         target_x.append(center[0]+r*math.cos(theta+i*2*pi/3))
         target_y.append(center[1]+r*math.sin(theta+i*2*pi/3))
     m,n=n_car//3-1,n_car%3 # m为三角形每条边上（不含顶点）车的数量，n为需要增加1辆车的边数（比如n=2，则在OA和OB边上各增加一辆车)
@@ -93,8 +94,10 @@ def formation_triangle(center,theta,n_car, r):
     elif n==2:
         side[0],side[1]=m+1,m+1
     k=0
-    for i in range(2):
-        for j in range(i+1,3):
+    i_max = min(2, n_car-1)         # 支持两辆车的三角队形
+    j_max = min(3, n_car)
+    for i in range(i_max):
+        for j in range(i+1,j_max):
                 OA = [target_x[i] - center[0], target_y[i] - center[1]]
                 OB = [target_x[j] - center[0], target_y[j] - center[1]]
                 for l in range(side[k]):

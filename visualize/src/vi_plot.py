@@ -176,6 +176,7 @@ def visual():
             if is_gps_ready_list[i_car]:
                 vehicle_pose_state = pose_states[i_car]
                 plt.plot(vehicle_pose_state.position.x, vehicle_pose_state.position.y, 'bo')
+                # print('plot car ', id)
                 draw_car(vehicle_pose_state.position.x, vehicle_pose_state.position.y, vehicle_pose_state.orientation.z/180*np.pi, 0)
             
             if  is_preview_point_ready_list[i_car]:

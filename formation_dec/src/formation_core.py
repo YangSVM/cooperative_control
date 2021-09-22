@@ -622,9 +622,21 @@ def sequential_passing(pos_formations, states, global_frenet_csps, pos_formation
         car2pass = priority
 
 
+
     # 阶段小于1的车， 按顺序启动。已经阶大于1的车，匀速前进
     for i_car in range(n_car):
-        
+        # 
+        csp = global_frenet_csps[i_car]
+        end_x = csp.sx.y[-1]
+        end_y = csp.sy.y[-1]
+        if np.hypot(states[i_car].position.x - end_x, states[i_car].position.y - end_y) <=1:
+            print("Goal!")
+            vehicle_states[i_car] = FormationState.goal
+            path_x.append([])
+            path_y.append([])
+            path_v.append([])
+            continue
+
         if vehicle_formation_stage[i_car]>0:
             tmp_x, tmp_y, tmp_v = cut_csp(global_frenet_csps[i_car], frenet_car[i_car, 0])
         else:

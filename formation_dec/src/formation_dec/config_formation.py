@@ -7,11 +7,14 @@ V = 1.5         # m/s
 MIN_R = 0.8/np.tan(20/180*PI)           # 2.2米左右
 # 全局任务信息，初始化为1
 task = 1
-n_car = 3
-car_ids = [1,2,5]
+# n_car = 2
+# car_ids = [2,5]
 
-# n_car = 5 
-# car_ids = [i+1 for i in range(n_car)]
+# n_car = 3
+# car_ids = [1,2,5]
+
+n_car = 5 
+car_ids = [i+1 for i in range(n_car)]
 
 d_car = 2.5
 
@@ -47,7 +50,7 @@ boundary = np.array([[12.06,19.49],
 
 
 # 集结队形参数调整
-r_u_turn = 3
+r_u_turn = 4
 r = 12
 
 center_line = np.array([
@@ -57,6 +60,15 @@ center_line = np.array([
     [r_u_turn, -r],
     [2*r_u_turn, -r + r_u_turn],
     [2*r_u_turn, -r + r_u_turn + 2],
-])
+], dtype=float)
     
-
+# 0918卡车挡住，规划较短的路径
+# r_x = 3 
+# center_line = np.array([
+#     [0,r+5],
+#     [0, r+5 -7],
+#     [0, -r_x + r_u_turn],
+#     [r_u_turn, -r_x],
+#     [2*r_u_turn, -r_x + r_u_turn],
+#     [2*r_u_turn, -r_x + r_u_turn + 2],
+# ], dtype=float)

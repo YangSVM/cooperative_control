@@ -198,7 +198,7 @@ class TaskBase():
         elif i_task==3:         # 通过障碍
             # pos_formations, obs = load_scene_battle()
             # pos_formations,  self.theta_degs = load_avoid_summon()
-            pos_formations,  self.theta_degs = load_line_through()
+            pos_formations,  self.theta_degs, self.critical_state_selector = load_sequence_passing()
 
             # plt.plot(pos_formations[..., 0], pos_formations[...,1], 'r*')
             # plt.axis('square')
@@ -486,7 +486,7 @@ def load_avoid_summon():
     return pos_formations, theta_degs
 
 
-def load_line_through():
+def load_sequence_passing():
     '''用直线队列方法通过障碍物
     '''
     global battle_pos, battle_theta, battle_theta_norm, obs
@@ -508,26 +508,36 @@ def load_line_through():
 
     # 围绕障碍物的队形
     # 单列通过。每列中心是障碍物中心
-    pos_through_mid = (obs[0, :] + obs[1, :])/2
+    theta_norm = (battle_theta_norm)/180*pi
+    d_norm =  np.array([math.cos(theta_norm), math.sin(theta_norm)])
+    pos_through_mid = (obs[0, :] + obs[1, :])/2 - d_norm *2.5
     pos_through  = formation_point(pos_through_mid, n_car)
     
     pos_formations.append(pos_through)
 
     # 北尽头拐弯处
-    theta_norm = (battle_theta_norm)/180*pi
-    d_norm =  np.array([math.cos(theta_norm), math.sin(theta_norm)])
-    point_north_turn = pos_through_mid+d_norm*3.5
+
+    point_north_turn = pos_through_mid+d_norm*3
     pos_north_turn = formation_point(point_north_turn, n_car)
     pos_formations.append(pos_north_turn)
 
     # 返回集结点的队形
-    pos_line =formation_line(center_line[0, :], 0, n_car, 2)
+    end_pos = center_line[0, :].copy()
+    # control point. 控制点.帮助拐弯
+    end_pos_cp = end_pos.copy()
+    end_pos_cp[1] += 0.5
+    end_pos_cp[0] -= 1
+    pos_line_cp =formation_line(end_pos_cp, 0, n_car, d_car)
+    pos_formations.append(pos_line_cp)
+
+    pos_line =formation_line(end_pos, 0, n_car, d_car)
     pos_formations.append(pos_line)
     pos_formations = np.array(pos_formations)
 
-    theta_degs = np.array([battle_theta_norm,battle_theta_norm, battle_theta_norm, -90])
-    
-    return pos_formations, theta_degs
+    theta_degs = np.array([battle_theta_norm,battle_theta_norm, battle_theta_norm, -90, -90])
+
+    critical_state_selector = [0,1,2,3]
+    return pos_formations, theta_degs, critical_state_selector
 
 
 def load_scene_battle(direction=1):
@@ -546,11 +556,11 @@ def load_scene_battle(direction=1):
     degree_norm = math.atan2(vec_norm[1], vec_norm[0])*180/pi
     degree_line = math.atan2(vec_line[1], vec_line[0])*180/pi
     center1 = start_pos_center + vec_norm*delta_line + vec_line * 2 *direction    # 
-    pos_line = formation_line(center1, degree_norm, n_car, 2)
+    pos_line = formation_line(center1, degree_norm, n_car, d_car)
     pos_formations.append(pos_line)
     
     center2 = start_pos_center + vec_norm*delta_line*2
-    pos_v_line  = formation_line(center2, degree_line, n_car, 2)
+    pos_v_line  = formation_line(center2, degree_line, n_car, d_car)
     pos_formations.append(pos_v_line)
     pos_formations = np.array(pos_formations)
 
