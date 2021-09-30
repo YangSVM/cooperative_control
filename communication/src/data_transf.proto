@@ -100,6 +100,11 @@ message EquipInfo{
 	double sendTime =8;
 
 }
+//障碍物信息请求数据
+//update 2021.09.23 
+message ObstacleReq{
+	repeated ObstacleInfo datas = 1;
+}
 //人员信息请求数据
 message PersonReq{
 	repeated PersonInfo datas = 1;
@@ -125,7 +130,8 @@ service DataTransfService {
   rpc ZNTStatusReceive (ZNTStatusInfo) returns (BaseRespInfo) {}
 
   //障碍物信息，订阅障碍物数据的实现该接口
-  rpc ObstacleReceive(ObstacleInfo) returns (BaseRespInfo) {}
+  //update 2021.09.23 
+  rpc ObstacleInfoReceive(ObstacleReq) returns (BaseRespInfo) {}
 
   //人员信息接收接口，订阅人员数据方实现该接口
   rpc PersonInfoReceive(PersonReq) returns (BaseRespInfo) {}
