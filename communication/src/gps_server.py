@@ -18,8 +18,8 @@ import sys
 '''
 与中心节点传输数据所用的IP与端口号
 '''
-IP_CORE = '166.111.50.173'  # FIXME: 修改为运行数据交互节点的IP
-IP_CONTROL = '183.173.162.7'  # FIXME: 修改为运行目前节点的主机IP
+IP_CORE = '192.168.1.162'  # FIXME: 修改为运行数据交互节点的IP
+IP_CONTROL = '192.168.1.168'  # FIXME: 修改为运行目前节点的主机IP
 PORT_ASK_DATA = '19330'
 PORT_CORE2CTRL = '40012'  # FIXME: 修改为本节点预备接受回传数据的端口号
 

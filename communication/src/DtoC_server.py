@@ -13,7 +13,7 @@ import adm2ctrl_pb2
 import adm2ctrl_pb2_grpc
 import threading
 
-CTRL_RCV_ADDR = '183.173.113.26:20208'
+CTRL_RCV_ADDR = '192.168.43.78:20208'
 
 task_ready_flag = False
 task_msg = TasksRequest()
@@ -31,7 +31,8 @@ def pub_task_info():
         rate.sleep()
 
 def pub_attack_info():
-    pub = rospy.Publisher('AttackRequest', AttackRequest, queue_size=1)    rate = rospy.Rate(1)
+    pub = rospy.Publisher('AttackRequest', AttackRequest, queue_size=1)    
+    rate = rospy.Rate(1)
     while not rospy.is_shutdown():
         if not task_ready_flag:
             rate.sleep()

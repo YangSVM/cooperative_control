@@ -5,25 +5,13 @@ Author: Shi Gongchen, Yang Yibin
 在右手系中完成
 """
 
-from numpy.core.fromnumeric import trace
-from numpy.core.records import fromrecords
-from numpy.lib.function_base import select
-from numpy.lib.shape_base import vsplit
-from numpy.lib.type_check import isreal
-from scipy.optimize.optimize import vecnorm
 import rospy
 import numpy as np
 import copy
 import math
-import sys
-import os
-import random
-import shapely
-from shapely.geometry import LineString
-from scipy import interpolate
 from math import pi
 import time
-from formation_zoo import *
+from formation_common.formation_zoo import *
 from scipy.optimize import linear_sum_assignment
 from rospy.names import canonicalize_name
 from trajectory_tracking.msg import Trajectory, RoadPoint
@@ -71,13 +59,13 @@ id_real = [2, 5]
 FormationState = Enum('FormationState', ('transition', 'temp_goal', 'goal'))
 
 class FormationROS():
-    def __init__(self, n_car) -> None:
+    def __init__(self, n_car, id_list = [1,2,5], id_id_list_real=[1,2]) -> None:
         rospy.init_node("formation_decenteralized")
         self.n_car = n_car
         # 调试的是第几辆车
-        id_list = [1,2,5]
+
         self.id_list = id_list
-        self.id_id_list_real = [1,2]        # id_list中，第几辆车是真车，其余车是虚拟车。即id_list[1],id_list[2](2,5号车)是真车
+        self.id_id_list_real = id_id_list_real   # id_list中，第几辆车是真车，其余车是虚拟车。即id_list[1],id_list[2](2,5号车)是真车
         # 发布车辆轨迹
         self.pubs = [rospy.Publisher('car'+str(id_list[i])+'/local_trajectory', Trajectory, queue_size=1) for i in range(n_car)]
         self.pub_csps = [rospy.Publisher('car'+str(id_list[i])+'/global_trajectory', Trajectory, queue_size=1) for i in range(n_car)]

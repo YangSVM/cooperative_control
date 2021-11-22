@@ -1,23 +1,38 @@
 <launch>
 
-
   <node pkg="simulation" name="simulation_multi" type="multi_sim_node.py"> </node>
+
 
   <group ns="car1">
     <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
   </group>
+
+
   <group ns="car2">
-    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
-  </group>
-    <group ns="car5">
-    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"  > </node>
   </group>
 
-    <group ns="car3">
-    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
+  <group ns="car3">
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py" > </node>
   </group>
-    <group ns="car4">
-    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
+
+  <group ns="car4">
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py" > </node>
   </group>
+
+  <group ns="car5">
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py" > </node>
+  </group>
+
+
+  <!-- <group ns="car6">
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
+  </group> -->
+
+
+  <!-- <group ns="car7">
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py" > </node>
+  </group> -->
+
   
 </launch>

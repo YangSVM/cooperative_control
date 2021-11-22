@@ -7,7 +7,7 @@ Author: Atsushi Sakai(@Atsushi_twi)
 import math
 import numpy as np
 import bisect
-
+from formation_common.utils import del_duplecate_points
 
 class Spline:
     """
@@ -53,6 +53,8 @@ class Spline:
             return None
 
         i = self.__search_index(t)
+        if abs(t-self.x[-1])<1e-1:
+            return self.y[-1]
         dx = t - self.x[i]
         result = self.a[i] + self.b[i] * dx + \
             self.c[i] * dx ** 2.0 + self.d[i] * dx ** 3.0
@@ -72,6 +74,8 @@ class Spline:
             return None
 
         i = self.__search_index(t)
+        if i==len(self.x)-1:
+            i=i-1
         dx = t - self.x[i]
         result = self.b[i] + 2.0 * self.c[i] * dx + 3.0 * self.d[i] * dx ** 2.0
         return result
@@ -133,6 +137,8 @@ class Spline2D:
     """
 
     def __init__(self, x, y):
+        pos = del_duplecate_points(np.array([x,y]).T)
+        x, y = pos[:, 0], pos[:, 1]
         self.s = self.__calc_s(x, y)
         self.sx = Spline(self.s, x)
         self.sy = Spline(self.s, y)
@@ -175,8 +181,9 @@ class Spline2D:
         return yaw
 
 
-def calc_spline_course(x, y, ds=0.1):
-    sp = Spline2D(x, y)
+def spline_expand(sp:Spline2D, ds=0.1):
+    '''将样条曲线的每隔0.1m展开。返回
+    '''
     s = list(np.arange(0, sp.s[-1], ds))
 
     rx, ry, ryaw, rk = [], [], [], []
@@ -186,8 +193,48 @@ def calc_spline_course(x, y, ds=0.1):
         ry.append(iy)
         ryaw.append(sp.calc_yaw(i_s))
         rk.append(sp.calc_curvature(i_s))
+    return  rx, ry, ryaw, rk, s
+
+
+def calc_spline_course(x, y, ds=0.1):
+    sp = Spline2D(x, y)
+    
+    rx, ry, ryaw, rk, s = spline_expand(sp)
 
     return rx, ry, ryaw, rk, s
+
+# 给出参考轨迹csp, 求解对应frenet坐标系下的s-d
+def cartesian2frenet(x, y, csp :Spline2D):
+    pos = np.array([x, y])
+
+    s = np.arange(0, csp.s[-1], 0.1)
+    n_point = len(s)
+    csp_pos = np.zeros([n_point, 2])
+    for i in range(n_point):
+        csp_pos[i, 0], csp_pos[i, 1] = csp.calc_position(s[i])
+    pos_delta = csp_pos - pos
+    d = (pos_delta[:,0]**2 + pos_delta[:,1]**2)**0.5
+    d_min = d.min()
+    d_error = 0.1
+    idx = np.where(d < d_min + d_error)
+    id = idx[0][-1]
+    s_res = s[id]
+    d_res = np.linalg.norm(csp_pos[id,:]-pos)
+
+    # 增加判断d的正负
+    if id+1 < n_point:
+        vec  =  csp_pos[id+1, :] - csp_pos[id, :]
+    else:
+        vec = csp_pos[id, :] -csp_pos[id-1, :]
+    # 法向量
+    vec_normal  = [0, 0]
+    vec_normal[0], vec_normal[1] = -vec[1] , vec[0]
+    pos_vec = pos - csp_pos[id,:]
+    pos_sign = np.sign(np.dot(pos_vec, vec_normal))
+
+    # if s_res >0.5:
+    #     print('error xy2frenet: ', s_res)
+    return s_res, d_res*pos_sign
 
 
 def main():  # pragma: no cover

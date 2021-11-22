@@ -12,6 +12,7 @@
         "string": "cpp",
         "string_view": "cpp",
         "vector": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "dense": "cpp"
     }
 }

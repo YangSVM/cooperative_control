@@ -17,9 +17,9 @@ from communication.msg import ExecInfoRequest
 import adm2ctrl_pb2 as pb2
 import adm2ctrl_pb2_grpc as pb2_grpc
 
-IP_CORE = '166.111.50.163'  # FIXME: 修改为运行数据交互节点的IP
-IP_DECISION = '183.173.129.248'  # FIXME: 修改为运行决策节点的主机IP
-PORT_CORE2DECISION = '20207'  # FIXME: 修改为本机预备接受回传数据的端口号
+
+IP_DECISION = '192.168.43.78'  # FIXME: 
+PORT_CORE2DECISION = '20207'  # FIXME: 
 
 
 

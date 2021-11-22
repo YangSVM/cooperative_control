@@ -1,0 +1,57 @@
+<launch>
+  <arg name="host1" value="1" />
+  <arg name="host2" value="2" />
+  <arg name="host3" value="3" />
+  <arg name="host4" value="4" />
+  <arg name="host5" value="5" />
+  <arg name="host6" value="6" />
+  <arg name="host7" value="7" />
+
+
+  <node pkg="simulation" name="simulation_multi" type="multi_sim_node.py"> </node>
+
+
+  <group ns="car1">
+
+    <rosparam param="roadMapPath">"/home/tiecun/catkin_ws/src/MA-L5-THICV/trajectory_tracking/trajectory_tracking/src/roadmap/road2_vel_1.txt"</rosparam>
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit_keyboard.py" args="$(arg host1)"> </node>
+  </group>
+
+
+  <group ns="car2">
+    <rosparam param="roadMapPath">"/home/tiecun/catkin_ws/src/MA-L5-THICV/trajectory_tracking/trajectory_tracking/src/roadmap/road2_vel_2.txt"</rosparam>
+
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit_keyboard.py"  args="$(arg host2)"> </node>
+  </group>
+
+  <group ns="car3">
+      <rosparam param="roadMapPath">"/home/tiecun/catkin_ws/src/MA-L5-THICV/trajectory_tracking/trajectory_tracking/src/roadmap/road2_vel_3.txt"</rosparam>
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit_keyboard.py" args="$(arg host3)"> </node>
+  </group>
+
+  <group ns="car4">
+      <rosparam param="roadMapPath">"/home/tiecun/catkin_ws/src/MA-L5-THICV/trajectory_tracking/trajectory_tracking/src/roadmap/road2_vel_4.txt"</rosparam>
+
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit_keyboard.py" args="$(arg host4)"> </node>
+  </group>
+
+  <group ns="car5">
+      <rosparam param="roadMapPath">"/home/tiecun/catkin_ws/src/MA-L5-THICV/trajectory_tracking/trajectory_tracking/src/roadmap/road2_vel_5.txt"</rosparam>
+
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit_keyboard.py" args="$(arg host5)"> </node>
+  </group>
+
+
+  <!-- <group ns="car6">
+      <rosparam param="roadMapPath">"road1_vel_2.txt"</rosparam>
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit_keyboard.py" args="$(arg host6)"> </node>
+  </group> -->
+
+
+  <!-- <group ns="car7">
+      <rosparam param="roadMapPath">"road1_vel_2.txt"</rosparam>
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit_keyboard.py" args="$(arg host7)"> </node>
+  </group> -->
+
+  
+</launch>

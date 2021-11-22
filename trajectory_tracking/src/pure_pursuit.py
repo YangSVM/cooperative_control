@@ -49,7 +49,7 @@ class PurePursuit():
         #  control_cmd initialize
         self.cmd = Int16MultiArray()
         self.cmd.data = np.zeros([13], dtype=int).tolist()
-        self.cmd.data[3] , self.cmd.data[8], self.cmd.data[9]=1, 1, 1
+        self.cmd.data[3] , self.cmd.data[8]=1, 1
         self.rate = rospy.Rate(60)
     
     def run(self):
@@ -131,6 +131,9 @@ class PurePursuit():
             angle = np.sign(angle) *30
         
         # 转角右转为正
+        if np.isnan(angle):
+            rospy.logwarn('purepursuit. 135 angle is None')
+            angle =0
         self.cmd.data[1] = int(angle * 1024/30)
 
         vel_target  = self.local_traj.roadpoints[id_current].v
@@ -153,11 +156,19 @@ class PurePursuit():
         if vel_cmd ==0:
             print('stop!')
 
-        self.cmd.data[0] = int (vel_cmd*36 )
+
         if preview_distance_real < 0.5:
-            self.cmd.data[0] = 0
+            vel_cmd = 0
             self.cmd.data[1] = 0
         
+        # 增加快到道路尽头减速功能：减速到low speed: 
+        v_slow = 0.5
+        d2end = np.linalg.norm(local_traj_xy[-1, :] - self.posture[:2])
+        if d2end<2:     # 2m看做准备到道路尽头
+            vel_cmd = min(vel_cmd, v_slow)
+
+        self.cmd.data[0] = int (vel_cmd*36 )
+
         # 正常运行时，从此处完成
         self.error_ending = False
         return

@@ -13,11 +13,88 @@
 #include "tf/transform_datatypes.h"
 #include <sensor_msgs/Imu.h>
 #include <tf/tf.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <math.h>
+#include <vector>
+#include <Eigen/Dense>
+#include <iostream>
+#include <fstream> //read write file
+
+
 using namespace std;
 
+#define REQ 6378137.0
+#define RPO 6356752.0
 #define PI 3.141592653589793
 # define X0 4430489.883
 # define Y0 442634.062
+
+#define Rad(x) ( (x) * M_PI / 180.0 )
+#define Deg(x) ( (x) * 180.0 / M_PI )
+#define Sq(x) ( (x)*(x) )
+#define Max(a,b) ((a)>(b)?(a):(b))
+#define Min(a,b) ((a)<(b)?(a):(b))
+
+using namespace Eigen;
+using namespace std;
+
+
+struct gps_linearize_t
+{
+    double lon0_deg, lat0_deg;
+    double radius_ns, radius_ew;
+};
+
+
+/************.cpp*************/
+
+/* Useful links:
+   http://www.movable-type.co.uk/scripts/LatLongVincenty.html
+   http://en.wikipedia.org/wiki/Earth_radius
+*/
+// 相当于横纵轴不相同给出的解
+gps_linearize_t base_gps;
+void gps_linearize_init(gps_linearize_t *gl, const double ll_deg[2])
+{
+    gl->lat0_deg = ll_deg[0];
+    gl->lon0_deg = ll_deg[1];
+
+    double a = 6378137;  // R_equator//m
+    double b = 6356752;  // R_polar//m
+
+    double lat_rad = Rad(ll_deg[0]);
+
+    // this is the best radius approximation, agnostic of direction
+    // we don't use this anymore.
+    //    gl->radius = a*a*b / (Sq(a*cos(lat_rad)) + Sq(b*sin(lat_rad)));
+
+    // best radius approximation in ns and ew direction.
+    gl->radius_ns = Sq(a*b) / pow((Sq(a*cos(lat_rad))) + Sq(b*sin(lat_rad)), 1.5);
+    gl->radius_ew = a*a / sqrt(Sq(a*cos(lat_rad)) + Sq(b*sin(lat_rad)));
+}
+//xy[2] unit:m
+int gps_linearize_to_xy(gps_linearize_t *gl, const double ll_deg[2], double xy[2])
+{
+    double dlat = Rad(ll_deg[0] - gl->lat0_deg);
+    double dlon = Rad(ll_deg[1] - gl->lon0_deg);
+
+    xy[0] = sin(dlon) * gl->radius_ew * cos(Rad(gl->lat0_deg));
+    xy[1] = sin(dlat) * gl->radius_ns;
+    
+    return 0;
+}
+
+int gps_linearize_to_lat_lon(gps_linearize_t *gl, const double xy[2], double ll_deg[2])
+{
+    double dlat = asin(xy[1] / gl->radius_ns);
+    ll_deg[0] = Deg(dlat) + gl->lat0_deg;
+
+    double dlon = asin(xy[0] / gl->radius_ew / cos(Rad(gl->lat0_deg)));
+    ll_deg[1] = Deg(dlon) + gl->lon0_deg;
+
+    return 0;
+}
 
 serial::Serial ser; 
 template <typename Type>  
@@ -65,7 +142,7 @@ bool coordinateTransfer(double lat,double lon, vector<double> &point)
 }
 
 
-void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodometry,sensor_msgs::NavSatFix &msg_navsatfix,string &serial_data)
+void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodometry,sensor_msgs::NavSatFix &msg_navsatfix,string &serial_data, gps_linearize_t* gl)
 {
 
 	string serialHeader;
@@ -350,6 +427,7 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 		string temp_gpybm;
 		double dtmp, lat, lon;
 
+		// 用经纬度换算绝对坐标系
 
 		// 经纬度
 		temp_gpybm.assign(serial_data,separator_pos[2]+1 ,separator_pos[3]-separator_pos[2]-1);
@@ -357,14 +435,20 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 		temp_gpybm.assign(serial_data,separator_pos[3]+1 ,separator_pos[4]-separator_pos[3]-1);
 		lon = stringToNum<double>(temp_gpybm);
 
+		double global_xy[2] ={0, 0};
+		double ll_deg[2]= {lat, lon};
+		gps_linearize_to_xy(gl, ll_deg, global_xy);
+		msg_gnssodometry.pose.pose.position.x = global_xy[0] ;
+		msg_gnssodometry.pose.pose.position.y = global_xy[1];
+
 
 
 		temp_gpybm.assign(serial_data,separator_pos[11]+1 ,separator_pos[12]-separator_pos[11]-1);
 		dtmp = stringToNum<double>(temp_gpybm);
-		msg_gnssodometry.pose.pose.position.y = dtmp - X0;
+		// msg_gnssodometry.pose.pose.position.y = dtmp - X0;
 		temp_gpybm.assign(serial_data,separator_pos[12]+1 ,separator_pos[13]-separator_pos[12]-1);
 		dtmp = stringToNum<double>(temp_gpybm);
-		msg_gnssodometry.pose.pose.position.x = dtmp - Y0;
+		// msg_gnssodometry.pose.pose.position.x = dtmp - Y0;
 
 		ROS_INFO_STREAM("X = " << msg_gnssodometry.pose.pose.position.x);
 		ROS_INFO_STREAM("Y = " << msg_gnssodometry.pose.pose.position.y);
@@ -401,7 +485,7 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 
 
 		if (abs(status - 44) >1e-3){
-			ROS_ERROR_STREAM("GNSS states:"<< status <<" not 42. status not stable! gnss"); 
+			ROS_ERROR_STREAM("GNSS states:"<< status <<" not 44. status not stable! gnss"); 
 		}
 		ROS_INFO_STREAM("gps status = "<< status <<"\n");
 	}
@@ -442,7 +526,12 @@ int main (int argc, char** argv) {
 	nh.param<float>("gptra_freq",gptra_freq,1);
 	nh.param<float>("bestxyza_freq",bestxyza_freq,1);
 
-
+    double ll_deg[2] = {40.00670625, 116.32815636};
+    // {40.00688261, 116.32829583};
+    double test_xy[2] = {40.00688458, 116.32820744};
+    gps_linearize_t* gl= new gps_linearize_t();
+    gps_linearize_init(gl, ll_deg);
+	
 	// ros::Subscriber write_sub = nh.subscribe("writeToSerial", 1, writeCallback); 
 
 
@@ -528,7 +617,7 @@ int main (int argc, char** argv) {
 			for(int i = 0 ; i<vs.size(); i++)
 			{
 				// cout<<"read contents: " << vs[i] <<endl;
-				gpggaManager(msg_gpgga,msg_gnssodometry,msg_navsatfix,vs[i]);
+				gpggaManager(msg_gpgga,msg_gnssodometry,msg_navsatfix,vs[i], gl);
 				
 				//cout<<vs[i]<<endl;
 
@@ -538,9 +627,13 @@ int main (int argc, char** argv) {
 			//cout<<msg_gpgga.header.stamp<<endl;			
 
 			// read_pub.publish(msg_gpgga);///
-			read_pub_gps.publish(msg_gnssodometry);///			
-			read_pub_raw.publish(raw_msg);
+			double status = msg_gnssodometry.twist.twist.linear.z;
+			if (abs(status-44)<1e-3 or abs(status-54)<1e-3) {
+
+				read_pub_gps.publish(msg_gnssodometry);///			
+				read_pub_raw.publish(raw_msg);
 			
+			}
 			// if(msg_navsatfix.status.status == 1){
 			// cout<<"123"<<endl;
       

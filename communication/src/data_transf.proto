@@ -22,7 +22,9 @@ message ZNTStatusInfo {
 	double hBaijiaoSpeed = 16;
 	double vAcceleration = 17;
 	double hAcceleration = 18;
-	int64 sendTime = 19;
+	int32 isFire = 19;
+	int32 FireTarget = 20;
+	int64 sendTime = 21;
 
 }
 

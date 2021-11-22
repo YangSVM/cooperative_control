@@ -26,7 +26,8 @@ import math
 
 from math import pi
 import time
-from formation_dec.formation_zoo import *
+from formation_common.formation_zoo import *
+from formation_common.cubic_spline_planner import cartesian2frenet
 from scipy.optimize import linear_sum_assignment
 from trajectory_tracking.msg import Trajectory, RoadPoint
 from nav_msgs.msg import Odometry
@@ -34,11 +35,9 @@ from geometry_msgs.msg import Pose
 from enum import Enum
 from std_msgs.msg import Float64MultiArray
 
-try:
-    from quintic_polynomials_planner import QuinticPolynomial
-    import cubic_spline_planner
-except ImportError:
-    raise
+from formation_common.polynomials_planner import QuinticPolynomial
+from formation_common import cubic_spline_planner
+
 
 
 
@@ -53,8 +52,9 @@ ROAD_WIDTH_END = 1.2
 
 DT = 0.2  # time tick [s]
 # DT = 1
-MAX_T = 4.0 # max prediction time [s]
-MIN_T = 3.0  # min prediction time [s]
+MIN_T = 10  # min prediction time [s]
+MAX_T = MIN_T + DT # max prediction time [s]
+
 TARGET_SPEED = 1.5 # target speed [m/s]
 D_T_S = TARGET_SPEED   # target speed sampling length [m/s]
 # N_S_SAMPLE = 1  # sampling number of target speed
@@ -134,6 +134,7 @@ class FormationROS():
                 rp.x = v_path_x[i][i_rp]
                 rp.y = v_path_y[i][i_rp]
                 rp.v = v_speed[i][i_rp]
+                rp.code = 1
                 traj.roadpoints.append(rp)
             self.pubs[i].publish(traj)
     
@@ -340,38 +341,7 @@ def calc_frenet_paths(c_speed, c_d, c_d_d, c_d_dd, s0):
     return frenet_paths
 
 
-# 给出参考轨迹csp, 求解对应frenet坐标系下的s-d
-def cartesian2frenet(x, y, csp :cubic_spline_planner.Spline2D):
-    pos = np.array([x, y])
 
-    s = np.arange(0, csp.s[-1], 0.1)
-    n_point = len(s)
-    csp_pos = np.zeros([n_point, 2])
-    for i in range(n_point):
-        csp_pos[i, 0], csp_pos[i, 1] = csp.calc_position(s[i])
-    pos_delta = csp_pos - pos
-    d = (pos_delta[:,0]**2 + pos_delta[:,1]**2)**0.5
-    d_min = d.min()
-    d_error = 0.1
-    idx = np.where(d < d_min + d_error)
-    id = idx[0][-1]
-    s_res = s[id]
-    d_res = np.linalg.norm(csp_pos[id,:]-pos)
-
-    # 增加判断d的正负
-    if id+1 < n_point:
-        vec  =  csp_pos[id+1, :] - csp_pos[id, :]
-    else:
-        vec = csp_pos[id, :] -csp_pos[id-1, :]
-    # 法向量
-    vec_normal  = [0, 0]
-    vec_normal[0], vec_normal[1] = -vec[1] , vec[0]
-    pos_vec = pos - csp_pos[id,:]
-    pos_sign = np.sign(np.dot(pos_vec, vec_normal))
-
-    # if s_res >0.5:
-    #     print('error xy2frenet: ', s_res)
-    return s_res, d_res*pos_sign
 
 
 def calc_global_paths(fplist, csp):

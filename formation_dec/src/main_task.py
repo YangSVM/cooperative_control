@@ -16,7 +16,6 @@ v 1.0
 1. 编队保持状态的反馈控制：(根据现有位置和理想编队位置的偏差，发布速度指令进行控制)
 
 """
-from os import isatty
 from typing import List
 from formation_core import FormationState
 
@@ -24,14 +23,14 @@ from formation_core import Assign
 import rospy
 import numpy as np
 from trajectory_tracking.msg import Trajectory,RoadPoint
-from formation_dec.formation_zoo import *
+from formation_common.formation_zoo import *
 from math import pi
 from formation_core import local_traj_gen, FormationROS, cartesian2frenet, sequential_passing
-import cubic_spline_planner
+from formation_common import cubic_spline_planner
 import time
 import math
 from communication.msg import ExecInfoRequest, TasksRequest, AttackRequest, TaskEI
-from formation_dec.config_formation import *
+from formation_common.config_formation import *
 
 
 class FormationWithTask(FormationROS):
@@ -337,28 +336,21 @@ def load_scene_summon():
     pos_formations.append(pos_line)
 
     # 三角队形匀速开始
-    # 三角队形输入
-    if n_car%3 == 0 :
-        n_edge_car = n_car//3
-    else:
-        n_edge_car = n_car//3 + 1
-    # 外接圆半径计算。原则：每条边上车辆距离应该是定值
-    r_tri = (d_car * n_edge_car)/math.sqrt(3) * math.sqrt(3)
-    pos_tri = formation_triangle(center_line[1, :],- 90,n_car,  r_tri)
+    pos_tri = formation_triangle(center_line[1, :],- 90,n_car,  d_car)
     pos_formations.append(pos_tri)
 
     # 三角队形匀速控制点
     n_contrl = 3
     d_dy = (center_line[2, :]- center_line[1, :])/(n_contrl + 1)
     for i_contrl in range(n_contrl):
-        pos_constant_ = formation_triangle(center_line[1, :]+d_dy*(i_contrl+1) ,- 90,n_car,  r_tri)
+        pos_constant_ = formation_triangle(center_line[1, :]+d_dy*(i_contrl+1) ,- 90,n_car,  d_car)
         pos_formations.append(pos_constant_)
 
     # 匀速运动结束位置
-    pos_tri_end = formation_triangle(center_line[2, :], -90,n_car,  r_tri)
+    pos_tri_end = formation_triangle(center_line[2, :], -90,n_car,  d_car)
     pos_formations.append(pos_tri_end)
     # 转弯中间位置
-    # pos_turn = formation_triangle(center_line[3, :], 0,n_car,  r_tri)
+    # pos_turn = formation_triangle(center_line[3, :], 0,n_car,  d_car)
     # pos_formations.append(pos_turn)
     # 结束点位置
     pos_end = formation_line(center_line[4, :], 0, n_car, d_car)

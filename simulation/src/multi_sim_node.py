@@ -16,8 +16,10 @@ from geometry_msgs.msg import Point
 from trajectory_tracking.msg import Trajectory
 from math import pi
 
-from formation_dec.formation_zoo import *
-from formation_dec.config_formation import *
+from formation_common.formation_zoo import formation_line
+from formation_common.config_formation_continous import *
+# from formation_common.config_formation import *
+
 
 
 # 全局变量。
@@ -85,6 +87,10 @@ class VehicleState:
 
         self.v = self.RegulateOutput(self.v)
 
+    def UpdataStopState(self):
+        self.v = 0
+
+
     @staticmethod
     def RegulateInput(delta, a):
         """
@@ -139,13 +145,17 @@ class VehicleState:
         return self.gps_msg
 
 
-def vehicle_update(msg, vehicleState):
+def vehicle_update(msg, vehicleState:VehicleState):
 
     v = msg.data[0]/36
     steer =(msg.data[1]*30/1024 ) *np.pi/180
     v0 = vehicleState.v
-    a = (v - v0)/ts
-    vehicleState.UpdateVehicleState(steer, a, 0, 0)
+    if abs(v)<0.01:
+        rospy.logwarn('multi_simnode. the vehicle  stop')
+        vehicleState.UpdataStopState()
+    else:
+        a = (v - v0)/ts
+        vehicleState.UpdateVehicleState(steer, a, 0, 0)
 
 
 def getPrewierPoint(msg, id):
@@ -210,9 +220,69 @@ def simulation():
     vehicle_state_list = []
 
     global task
+    if task == 0:
+
+        # pos_line =formation_line([0, -14], pi/2, n_car, d_car)
+        # pos_line =formation_line([8, 0], -pi/2, n_car, d_car)
+        # pos_line =formation_line([8, 0], 0, n_car, d_car)
+        pos_line = np.zeros([n_car, 3])
+
+        # 场景1
+        # pos_line[:n_car, :] = np.array([
+        #     [ 5.149,0 , (90-182 )/180*pi],
+        #     [5.157 , 1.472  , (90-180 )/180*pi],
+        #     [ 5.157, 2.772     , (90- 180)/180*pi],
+
+        #     [ 5.176,  4.388     , (90-180.652  )/180*pi],
+        #     [ 5.157  ,5.837     , (90-179.266 )/180*pi],
+        #     [  5.159 , 7.275    , (90-180.087 )/180*pi],
+
+
+        # ])
+
+
+        # # 场景2
+        # pos_line[:n_car, :] = np.array([
+        #     [  -6.508, -5.767 , (90-326.603 )/180*pi],
+        #     [ -4.628, -5.781  , (90-358.694 )/180*pi],
+        #     [ -2.242, -5.795    , (90- 0.218)/180*pi],
+
+        #     [  -0.221 ,  -5.795    , (90-0.204  )/180*pi],
+        #     [2.238, -5.750      , (90-7.576 )/180*pi],
+
+        # ])
+
+
+        # # 场景3
+        # pos_line[:n_car, :] = np.array([
+        #     [  -3.477, 16.560     , (90-187.305 )/180*pi],
+        #     [ -0.905, 16.560    , (90-183.783  )/180*pi],
+        #     [  0.381, 16.560     , (90- 178.260)/180*pi],
+
+        #     [    2.728, 16.560   , (90-175.882   )/180*pi],
+        #     [ 5.075,16.560   ,     (90- 172 )/180*pi]
+        # ])
+
+
+        # # 场景4
+        # pos_line[:n_car, :] = np.array([
+        #     [  -3.900, -7.956   , (90-355.720 )/180*pi],
+        #     [ -2.201 , -7.956    , (90-356.438  )/180*pi],
+        #     [  -0.589, -7.956    , (90- 359.392)/180*pi],
+
+        #     [   1.506  , -7.952   , (90-359.468   )/180*pi],
+        #     [4.000 , -7.948  ,     (90- 357.768 )/180*pi],
+        #     [ 0.309 , -8.951  ,     (90- 359.310 )/180*pi],
+        # ])
+
+        for i in range(n_car):
+            vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], pos_line[i, 2])
+            vehicle_state_list.append(vehicleState)
+
     if task == 1:
 
-        pos_line =formation_line(center_line[0, :], 0, n_car, d_car)
+        pos_line =formation_line(center_lines[0][0, :], -pi/2, n_car, d_car)
+        # pos_line =formation_line([r*2, -R+2*r + 1], pi/2, n_car, d_car)
         state_map_origin = [2 ,17,-90]    
         # state_map_origin = [2 ,-8,-90]    # fast  test
         # state_map_origin = [-2, 8,-90]  # field test
@@ -222,7 +292,7 @@ def simulation():
             vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], -pi/2)
             vehicle_state_list.append(vehicleState)
 
-    if task == 3:
+    if task == 4:
         global battle_pos, battle_theta, battle_theta_norm
         pos_start_center = np.copy(battle_pos[1, :])
         isAttackLeft = 1

@@ -19,11 +19,11 @@ from concurrent import futures
 import data_transf_pb2 as pb2
 import data_transf_pb2_grpc as pb2_grpc
 
-car_id_list = [1,2,5]
+car_id_list = [1,2,7]
 n_car = 3
 
 # 赵工IP
-IP_CORE= '166.111.50.173'
+IP_CORE= '192.168.1.162'
 PORT_ASK_DATA = '19330'
 
 def trajCallback(msg, i_car):
@@ -31,6 +31,7 @@ def trajCallback(msg, i_car):
     with grpc.insecure_channel(IP_CORE+':'+PORT_ASK_DATA) as channel:
         stub = pb2_grpc.DataTransfServiceStub(channel)
         
+        # 通过智能体编号筛选属于它的编号
         trajectory = pb2.GuiJiInfo(zntCode=str(car_id_list[i_car]))
         # print('publish ', car_id_list[i_car], 'traj')
         # print('n_points: ', len(msg.roadpoints))

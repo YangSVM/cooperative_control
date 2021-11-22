@@ -32,6 +32,7 @@ class Gear(Enum):
 class VehicleState:
     def __init__(self, x=0.0, y=0.0, yaw=0.0,
                  v=0.0, gear=Gear.GEAR_DRIVE):
+                #  '''国际单位制'''
         self.x = x
         self.y = y
         self.yaw = yaw
@@ -161,14 +162,16 @@ def simulation():
     rospy.init_node('simulation', anonymous=True)
 
     # load road map
-    mapFilePath = rospy.get_param('roadmap_path')
-    map = np.loadtxt(mapFilePath)
-    state_map_origin = map[0, :]
+    # mapFilePath = rospy.get_param('roadmap_path')
+    # map = np.loadtxt(mapFilePath)
+    # state_map_origin = map[0, :]
 
-    rospy.loginfo("Simulation: map loaded")
 
-    vehicleState = VehicleState(state_map_origin[2], state_map_origin[1], -state_map_origin[3] *np.pi /180 + np.pi/2)
+    # rospy.loginfo("Simulation: map loaded")
 
+    # vehicleState = VehicleState(state_map_origin[2], state_map_origin[1], -state_map_origin[3] *np.pi /180 + np.pi/2)
+
+    vehicleState = VehicleState(-10, 0, -state_map_origin[3] *np.pi /180 + np.pi/2)
     # 输入控制量
     rospy.Subscriber('control_cmd',Int16MultiArray, vehicle_update, vehicleState)
     rospy.Subscriber('purepusuit/preview_point', Point, getPrewierPoint)
