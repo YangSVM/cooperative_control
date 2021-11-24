@@ -5,8 +5,8 @@ v 1.0
 新版编队控制
 """
 from enum import Enum
-from typing import Dict, List, Tuple
-from formation.scripts.cubic_spline_planner import Spline2D
+from typing import List, Tuple
+from formation_common.cubic_spline_planner import Spline2D
 import time
 
 from formation_common.cubic_spline_planner import cartesian2frenet, spline_expand
@@ -16,12 +16,13 @@ from formation_common.formation_zoo import *
 from formation_continous.src.load_task_points import search
 from ros_interface import  ROSInterface, MATrajPlanningBase
 
-from formation_common.global_planning import generate_route, ds_trans_init
+from formation_common.global_planning import generate_route_with_formation, ds_trans_init
 from formation_common.formation_core import assgin_traj, judge_formation_end, judge_formation_stage, Assign
 from trajectory_planning import trajectory_planning, FrenetPath
 from geometry_msgs.msg import Pose
 from formation_common.config_formation_continous import TARGET_SPEED
 from scipy.spatial.distance import cdist
+from formation_stage_control import FormationStage
 
 # 编队状态：稳态。避障。数目增减（出队、入队）。队形变换。
 class FormationState(Enum):
@@ -52,40 +53,24 @@ class FormationSM():
 
         return self.state
 
+
 # 编队轨迹规划
 class FormationTrajPlanning(MATrajPlanningBase):
-    def __init__(self, n_car, center_line, formation_begin_s, formation_types, d_car=2.5,ds_trans=[], individual_csps:List[Spline2D]=[]) -> None:
+    def __init__(self, formation_stage:FormationStage) -> None:
         '''
         Params:
             theta_degs: 直接控制individual队形中的角度，而不是采用全局轨迹中的角度生成队形
         '''
-        # super().__init__(n_car, car_ids)
-        self.n_car = n_car
-        self.d_car = d_car
+        super().__init__()
+        self.fs = formation_stage
+        self.n_car = len(formation_stage.individual_csps)
+        self.d_car = self.fs.d_car
         self.fsm = FormationSM()
-        self.formation_begin_s = formation_begin_s
-        self.ds_trans = ds_trans
-        self.formation_types = formation_types
         self.formation_type_t = FormationState.Stable         # 当前编队类型
         self.stage = 0              # 当前所在的队形状态
-        # if center_line.shape[0] ==14:
-        #     print('debug')
 
-        # 如果有各自轨迹，直接使用
-        if len(individual_csps) > 0:
-            self.individual_csps = individual_csps
-        else:
-            # 根据全局轨迹，以及编队队形变换要求，生成预设轨迹
-            self.global_csp,  self.individual_csps, self.matches, self.formation_poses  = \
-                generate_route(center_line, formation_begin_s, formation_types, n_car, d_car=d_car,ds_trans=ds_trans)
-        
-        # if center_line.shape[0] ==14:
-        plt.plot(center_line[:,0], center_line[:,1],'g*-')
 
-        for i, csp_i in enumerate(self.individual_csps):
-            x,y, _ ,_,_= spline_expand(csp_i)
-            plt.plot(x,y, 'r*-')
-        plt.axis('equal')
+        # self.fs.individual_csps = self.fs.individual_csps
 
         self.leader_id = -1
         self.isInit = False         # 是否已经初始化。
@@ -98,22 +83,32 @@ class FormationTrajPlanning(MATrajPlanningBase):
         Params:
             pose_states: len=n_car.存储每辆车的位置
         '''
-        # 直接按照初始位置分：不鲁棒。车辆可能靠前导致失败
-        csp_poses = np.array([[csp.calc_position(0)] for csp in self.individual_csps])
+
+        csp_poses = np.array([[csp.calc_position(0)] for csp in self.fs.individual_csps])
         csp_poses = csp_poses.reshape([-1,2])
         car_poses = np.array([[pose.position.x, pose.position.y] for pose in pose_states])
         car_poses = car_poses.reshape([-1,2])
-        # _,_,matches=Assign(csp_poses, car_poses)
-        matches = assgin_traj(car_poses, self.individual_csps)
-        self.individual_csps =[self.individual_csps[i] for i in matches]            # reorder。根据分配结果重新排列
+        if self.fs.formation_types[0] == FormationType.Vertical:
+            _, matches=Assign(csp_poses, car_poses)              # 直接按照初始位置分：不鲁棒。车辆可能靠前导致失败.仅纵队时使用
+        else:
+            matches = assgin_traj(car_poses, self.fs.individual_csps)      # 按照横向位置分
+        self.fs.individual_csps =[self.fs.individual_csps[i] for i in matches]            # reorder。根据分配结果重新排列
+
+        # matches更改
+        for i_stage in range(1, len(self.fs.matches)):
+            self.fs.matches[i_stage, :] = self.fs.matches[i_stage ,matches]
+
+        if len(self.fs.ddelta_s) >0:
+            self.fs.ddelta_s = [self.fs.ddelta_s [i] for i in matches]
 
         # 记录头车编号：中间的轨迹的车。偶数量则是中间靠后(4//2 =2，第三辆车)。
         mid_id = self.n_car//2 
         self.leader_id = np.where(matches==mid_id)[0][0]
 
+        self.fs.initial(self.leader_id)
         # ds_trans 初始化
-        delta_s_end = 1         # 当处于这个阶段内。
-        self.ds_trans = ds_trans_init(self.ds_trans, len(self.formation_begin_s), self.formation_begin_s, self.individual_csps[self.leader_id].s[-1] - delta_s_end)
+        # delta_s_end = 1         # 当处于这个阶段内。
+        # self.ds_trans = ds_trans_init(self.ds_trans, len(self.formation_begin_s), self.formation_begin_s, self.fs.individual_csps[self.leader_id].s[-1] - delta_s_end)
 
     
     def traj_planning(self, pose_states, obs=[])->Tuple[List[np.ndarray], float]:
@@ -132,23 +127,24 @@ class FormationTrajPlanning(MATrajPlanningBase):
         poses = np.array(poses).reshape(-1,3)
         li = self.leader_id
 
-        s_leader, _ = cartesian2frenet(poses[li, 0], poses[li, 1], self.individual_csps[li])
-        stage = judge_formation_stage([s_leader], self.formation_begin_s, self.ds_trans)[0]
+        s_leader, _ = cartesian2frenet(poses[li, 0], poses[li, 1], self.fs.individual_csps[li])
+        stage = self.fs.judge_formation_stage(s_leader)
+        # stage = judge_formation_stage([s_leader], self.formation_begin_s, self.ds_trans)[0]
         
         self.stage = stage
      
-        print('\n'+10*'*' + 'formation stage: ', stage, '.\t formation type: ', self.formation_types[int(abs(stage))])
+        print('\n'+10*'*' + 'formation stage: ', stage, '.\t formation type: ', self.fs.formation_types[int(abs(stage))])
         print(10*'*' + 's_leader: ', s_leader)
 
         print('car poses:\n ', poses)
         state = self.fsm.state_transition(stage, obs)
-        self.formation_type_t = self.formation_types[int(abs(stage))]         # 当前编队状态
+        self.formation_type_t = self.fs.formation_types[int(abs(stage))]         # 当前编队状态
 
         # 单车规划各自路径
         fps = []
         isGoals =[]
         for i_car in range(self.n_car):
-            fp, isGoal = trajectory_planning(self.individual_csps[i_car], poses[i_car])
+            fp, isGoal = trajectory_planning(self.fs.individual_csps[i_car], poses[i_car])
             fps.append(fp)
             isGoals.append(isGoal)
 
@@ -156,7 +152,7 @@ class FormationTrajPlanning(MATrajPlanningBase):
         if state == FormationState.Stable:
             fps = self.stable_control(fps, poses, s_leader)
         elif state == FormationState.Obstacle:
-            fps = self.sequential_passing(self.individual_csps, poses)
+            fps = self.sequential_passing(self.fs.individual_csps, poses)
         elif state == FormationState.Transition:
             fps = self.transition_control(fps, poses, s_leader)
 
@@ -167,14 +163,14 @@ class FormationTrajPlanning(MATrajPlanningBase):
 
         trajs = [fp.to_numpy() for fp in fps]
 
-        isDone = judge_formation_end(poses[:, :2], self.individual_csps)
+        isDone = judge_formation_end(poses[:, :2], self.fs.individual_csps)
         if isDone:
             t_remain = -1
         else:
-            t_remain = (self.individual_csps[self.leader_id].s[-1] - s_leader) / TARGET_SPEED
+            t_remain = (self.fs.individual_csps[self.leader_id].s[-1] - s_leader) / TARGET_SPEED
             if t_remain<0:          # 有可能头车到达，但是其他车没到达。
-                s_cars = [ cartesian2frenet(poses[li, 0], poses[li, 1], self.individual_csps[li])[0] for li in range(self.n_car)]
-                t_remains = [ (self.individual_csps[i].s[-1] - s_cars[i]) / TARGET_SPEED for i in range(self.n_car)]
+                s_cars = [ cartesian2frenet(poses[li, 0], poses[li, 1], self.fs.individual_csps[li])[0] for li in range(self.n_car)]
+                t_remains = [ (self.fs.individual_csps[i].s[-1] - s_cars[i]) / TARGET_SPEED for i in range(self.n_car)]
                 t_remain = max(t_remains)
 
         return trajs, t_remain
@@ -185,12 +181,12 @@ class FormationTrajPlanning(MATrajPlanningBase):
 
         '''
         # 根据头车位置生成队形
-        # x,y = self.individual_csps[self.leader_id].calc_position(s_leader)
+        # x,y = self.fs.individual_csps[self.leader_id].calc_position(s_leader)
         pos_leader = poses[self.leader_id, :]
-        yaw = self.individual_csps[self.leader_id].calc_yaw(s_leader)
+        yaw = self.fs.individual_csps[self.leader_id].calc_yaw(s_leader)
 
         formation_np = gen_formation(pos_leader, yaw, self.n_car, self.d_car, self.formation_type_t)
-        formation_np, _, _ = Assign(poses, formation_np)
+        formation_np, _= Assign(poses, formation_np)
 
         # 比例控制
         yaw_vec = np.array([math.cos(yaw), math.sin(yaw)])
@@ -215,26 +211,37 @@ class FormationTrajPlanning(MATrajPlanningBase):
     def transition_control(self, fps, poses, s_leader):
         # 目标队形生成
         i_stage = int(abs(self.stage))
-        s_target = self.formation_begin_s[i_stage] + self.ds_trans[i_stage]
+        s_target = self.fs.formation_begin_s[i_stage] + self.fs.ds_trans[i_stage]
 
         pos_leader = poses[self.leader_id, :]
-        pos_leader =self.individual_csps[self.leader_id].calc_position(s_target)
-        yaw = self.individual_csps[self.leader_id].calc_yaw(s_target)
+        pos_leader =self.fs.individual_csps[self.leader_id].calc_position(s_target)
+        yaw = self.fs.individual_csps[self.leader_id].calc_yaw(s_target)
 
         formation_np = gen_formation(pos_leader, yaw, self.n_car, self.d_car, self.formation_type_t)
         # formation_np, _, _ = Assign(poses, formation_np)                        # 这样写会导致编号动态变化。
-        formation_np = formation_np[self.matches[i_stage, :], :]
+        formation_np = formation_np[self.fs.matches[i_stage, :], :]
         
 
         yaw_vec = np.array([math.cos(yaw), math.sin(yaw)])
 
         # 计算路程
-        s_formation = [cartesian2frenet(pos[0],pos[1],self.individual_csps[i_car])[0] for i_car, pos in enumerate(formation_np)]
-        s_pos = [cartesian2frenet(pos[0],pos[1],self.individual_csps[i_car])[0] for i_car, pos in enumerate(poses)]
-        delta_s = [s1-s2 for s1,s2 in zip(s_formation, s_pos)]
-        s0 = delta_s[self.leader_id]
-        delta_s = np.array([s - s0  for s in delta_s])
-        print('detla_s', delta_s)
+        s_formation = [cartesian2frenet(pos[0],pos[1],self.fs.individual_csps[i_car])[0] for i_car, pos in enumerate(formation_np)]
+        s_pos = [cartesian2frenet(pos[0],pos[1],self.fs.individual_csps[i_car])[0] for i_car, pos in enumerate(poses)]
+        s_remain = [s1-s2 for s1,s2 in zip(s_formation, s_pos)]
+
+
+        # leader控制为常速.
+        s0 = s_remain[self.leader_id]
+        delta_s_remain = np.array([s - s0  for s in s_remain])
+
+        # 增加调整参数: 
+        ddelta_s=self.fs.ddelta_s
+        if self.fs.formation_types[i_stage] == FormationType.Line:
+            # 只在拐弯冲突中使用，此时等价于要变换的队形是横队
+            if len(ddelta_s)>0:
+                for i in range(self.n_car):
+                    delta_s_remain[i] += ddelta_s[i]
+
 
         # 计算直接距离
         delta_vec = formation_np - poses[..., :2]
@@ -246,7 +253,7 @@ class FormationTrajPlanning(MATrajPlanningBase):
         dt = 3            # 下一次轨迹规划完成时，能够调整好队形
         # d_v  =  delta_d_norm* np.sign(direction) / dt
 
-        d_v  =delta_s/dt
+        d_v  =delta_s_remain/dt
  
         # DV_RATIO 以内的加减速
         d_v[d_v>DV_RATIO*TARGET_SPEED] = DV_RATIO*TARGET_SPEED
@@ -254,7 +261,10 @@ class FormationTrajPlanning(MATrajPlanningBase):
         v = TARGET_SPEED +d_v
 
         v_str = ['{:.2f}'.format(vi) for vi in v]
-        print('!!![Transition]: v: ', v_str)
+        print(10*'-' + 'FormationState: Transition : v: ', v_str)
+        print('detla_s', delta_s_remain)
+        print('v: ', v_str)
+
 
         # 设置成同时能够到达目标位置的速度
         for i in range(self.n_car):
@@ -510,10 +520,12 @@ def collision_avoid2(fps:List[FrenetPath],  v_fps, pass_order):
 class MAFormationTrajPlanning(MATrajPlanningBase):
     ''' color MAPF. 同质智能体可以交换目的地。
     '''
-    def __init__(self,  car_colors, center_lines, formation_begin_s, formation_types, d_car=2.5, ds_trans=[]) -> None:
-        self.center_lines = center_lines
+    def __init__(self,  car_colors, fs:List[FormationStage]) -> None:
+        # center_lines, formation_begin_s, formation_types, d_car=2.5, ds_trans=[]
+        self.fs = fs
+        # self.center_lines = center_lines
 
-        self.n_groups = len(center_lines)
+        self.n_groups = len(car_colors)
 
         self.n_group_cars = np.array([len(car_color) for car_color in car_colors])
         self.color_group_dict = {}
@@ -548,9 +560,10 @@ class MAFormationTrajPlanning(MATrajPlanningBase):
 
         self.individual_csps=[]
         for i_group in range(self.n_groups):
-            ftp = FormationTrajPlanning(len(car_colors[i_group]), center_lines[i_group], formation_begin_s[i_group], formation_types[i_group], d_car=d_car, ds_trans=ds_trans[i_group])
+            # ftp = FormationTrajPlanning(len(car_colors[i_group]), fs[i_group])
+            ftp = FormationTrajPlanning(fs[i_group])
             self.ftps.append(ftp)
-            self.individual_csps.extend(ftp.individual_csps)
+            self.individual_csps.extend(ftp.fs.individual_csps)
         self.isInit = False
 
     def initial(self, poses):
@@ -574,7 +587,7 @@ class MAFormationTrajPlanning(MATrajPlanningBase):
             csp_pos = -1 * np.ones([sum(n_group_car), 2])
 
             for i, group_id in enumerate(group_ids):
-                csp_pos[group_start_id[i]: group_start_id[i]+n_group_car[i], :] = self.center_lines[group_id][0, :2]
+                csp_pos[group_start_id[i]: group_start_id[i]+n_group_car[i], :] = np.array(self.fs[group_id].individual_csps[0].calc_position(0))
             car_pos = poses[np.array(self.color_car_dict[color]), :]
 
             _,  matches = Assign(csp_pos, car_pos)

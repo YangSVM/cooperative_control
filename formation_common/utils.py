@@ -2,21 +2,28 @@
 '''辅助设计全局轨迹
 '''
 import numpy as np
+import math
+
+from numpy.linalg import linalg
 PI = np.pi
 
-def gen_line(begin, end, ds=0.01):
+def gen_line(begin, end, ds=0.01, dim=2):
     ''' 生成一条起点(x,y)到终点(x,y)的直线点。距离间隔为ds
     '''
     begin = np.array(begin)
     end = np.array(end)
     vec = end - begin
-    vec_len = np.linalg.norm(vec)
+    vec_len = np.linalg.norm(vec[..., :2])
     n_points = int(vec_len/ds)
-    line = np.zeros([n_points, 2])
+    line = np.zeros([n_points, 3])
     line[:, 0] = np.linspace(begin[0], end[0], n_points)
     line[:, 1] = np.linspace(begin[1], end[1], n_points)
-
+    line[:, 2] = math.atan2(vec[1], vec[0])
+    if dim == 2:
+        line = line[:, :2]
+        
     return line
+
 
 def gen_arc(center, theta_s, theta_e, r, isCounterClock=1, ds=0.1):
     ''' 生成一条圆弧

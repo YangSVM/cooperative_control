@@ -5,7 +5,6 @@ v 1.0
 main程序。完成一系列 规划任务。
 """
 
-from os import isatty
 from typing import List, Tuple
 
 import rospy
@@ -21,14 +20,14 @@ from formation_trajectory_planning import  MAFormationTrajPlanning
 from load_task_points import load_task_configs
 
 class TaskExcute(ROSInterface):
-    def __init__(self, n_car, car_colors, center_lines, formation_begin_ls, formation_type_ls, ds_trans_ls):
+    def __init__(self, n_car, car_colors, fs_lists):
         super().__init__(n_car, car_ids)
         # 加载任务
-        self.n_task = len(center_lines)
+        self.n_task = len(car_colors)
         n_task = self.n_task
         self.ftps= []
         for i in range(n_task):
-            ftp = MAFormationTrajPlanning(car_colors[i], center_lines[i], formation_begin_ls[i], formation_type_ls[i],  ds_trans=ds_trans_ls[i],d_car=2.5)
+            ftp = MAFormationTrajPlanning(car_colors[i], fs_lists[i])
             self.ftps.append(ftp)
 
         self.prate = rospy.Rate(2)     # planing rate
@@ -57,6 +56,7 @@ class TaskExcute(ROSInterface):
                     obs = [1]
                 else:
                     obs=[]
+                # obs = []
                 trajs, t_remain = ftp.traj_planning(self.pose_states, obs)
 
                 print('remaining time:' , t_remain)
@@ -74,8 +74,9 @@ class TaskExcute(ROSInterface):
 
 if __name__=='__main__':
 
-    car_color_list, routes_list, formation_begin_ls, formation_type_ls, ds_trans_ls = load_task_configs()
-    task_main = TaskExcute(n_car, car_color_list, routes_list, formation_begin_ls, formation_type_ls, ds_trans_ls)
+    car_color_list, fs_list = load_task_configs()
+    
+    task_main = TaskExcute(n_car, car_color_list, fs_list)
     tm = TaskManager()
     # with task feedback
     # task_main.initial(tm)

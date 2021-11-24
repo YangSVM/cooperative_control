@@ -20,7 +20,7 @@ from formation_common.formation_core import Assign, FormationState, judge_format
 输入一条中心轨迹。给定路径点，以及路径轨迹。
 '''
 
-def generate_route(center_line: np.ndarray, formation_input: List, formation_types: List[FormationType],
+def generate_route_with_formation(center_line: np.ndarray, formation_input: List, formation_types: List[FormationType],
 n_car: int, d_car: float =2.5, input_type: int=0, ds_trans=[])-> Tuple[Spline2D, List[Spline2D], np.ndarray, np.ndarray]:
     '''
     
@@ -139,20 +139,20 @@ def plot_csp(csp: Spline2D, plot_style='r*', ds=1):
 
 
 
-if __name__ == '__main__':
-    formation_inputs = [0,7, 14, 20]
-    formation_types = [FormationType.Line, FormationType.Triangle, FormationType.Line, FormationType.Line]
-    ds_trans = [ds_formation_transition for i in range(len(formation_inputs))]
-    ds_trans[-1] = 10000
-    plt.figure(1)
-    # plt.plot(center_line[:,0], center_line[:,1], 'bo')
+# if __name__ == '__main__':
+    # formation_inputs = [0,7, 14, 20]
+    # formation_types = [FormationType.Line, FormationType.Triangle, FormationType.Line, FormationType.Line]
+    # ds_trans = [ds_formation_transition for i in range(len(formation_inputs))]
+    # ds_trans[-1] = 10000
+    # plt.figure(1)
+    # # plt.plot(center_line[:,0], center_line[:,1], 'bo')
 
-    global_csp,  individual_csps, matches, formation_poses  = generate_route(center_line, formation_inputs, formation_types, n_car, ds_trans=ds_trans)
+    # global_csp,  individual_csps, matches, formation_poses  = generate_route_with_formation(center_line, formation_inputs, formation_types, n_car, ds_trans=ds_trans)
 
-    # plot_csp(global_csp,'r.-', ds=0.01)
-    for individual_csp in individual_csps:
-        plot_csp(individual_csp, 'r*-', ds=1)
-    # for i_car in range(formation_poses.shape[1]):
-    #     plt.plot(formation_poses[:,i_car, 0], formation_poses[:, i_car, 1], 'g*-')
-    plt.axis('square')
-    plt.show()
+    # # plot_csp(global_csp,'r.-', ds=0.01)
+    # for individual_csp in individual_csps:
+    #     plot_csp(individual_csp, 'r*-', ds=1)
+    # # for i_car in range(formation_poses.shape[1]):
+    # #     plt.plot(formation_poses[:,i_car, 0], formation_poses[:, i_car, 1], 'g*-')
+    # plt.axis('square')
+    # plt.show()

@@ -13,7 +13,7 @@ TARGET_SPEED = 3
 
 ds_formation_transition = 5    # 队形调整间距
 # 全局任务信息，初始化为1
-task = 4
+task = 0
 # n_car=1
 # n_car = 2
 # car_ids = [7]
@@ -27,7 +27,7 @@ car_ids= [i+1 for i in range(n_car)]
 pix_ids = [i+1 for i in range(5)]
 
 d_car = 2.5
-
+isPlot = 0
 
 # 前三个为障碍物锥桶，后三个为后方的敌方智能体
 obs = np.array([[ -7.49,	16.28],

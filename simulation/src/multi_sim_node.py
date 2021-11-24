@@ -151,7 +151,7 @@ def vehicle_update(msg, vehicleState:VehicleState):
     steer =(msg.data[1]*30/1024 ) *np.pi/180
     v0 = vehicleState.v
     if abs(v)<0.01:
-        rospy.logwarn('multi_simnode. the vehicle  stop')
+        # rospy.logwarn('multi_simnode. the vehicle  stop')
         vehicleState.UpdataStopState()
     else:
         a = (v - v0)/ts
@@ -224,8 +224,8 @@ def simulation():
 
         # pos_line =formation_line([0, -14], pi/2, n_car, d_car)
         # pos_line =formation_line([8, 0], -pi/2, n_car, d_car)
-        # pos_line =formation_line([8, 0], 0, n_car, d_car)
-        pos_line = np.zeros([n_car, 3])
+        pos_line =formation_line([8, 0], 0, n_car, d_car)
+        # pos_line = np.zeros([n_car, 3])
 
         # 场景1
         # pos_line[:n_car, :] = np.array([
@@ -276,12 +276,15 @@ def simulation():
         # ])
 
         for i in range(n_car):
-            vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], pos_line[i, 2])
+            if pos_line.shape[1]>2:
+                vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], pos_line[i, 2]) 
+            else:
+                vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], -pi/2) 
             vehicle_state_list.append(vehicleState)
 
     if task == 1:
 
-        pos_line =formation_line(center_lines[0][0, :], -pi/2, n_car, d_car)
+        pos_line =formation_line([0, -14], pi/2, n_car, d_car)
         # pos_line =formation_line([r*2, -R+2*r + 1], pi/2, n_car, d_car)
         state_map_origin = [2 ,17,-90]    
         # state_map_origin = [2 ,-8,-90]    # fast  test
@@ -289,8 +292,16 @@ def simulation():
 
         for i in range(n_car):
             # vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
-            vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], -pi/2)
+            vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], pi/2)
             vehicle_state_list.append(vehicleState)
+    
+    if task == 2:   # after search
+        pos_line = formation_line([0, 14], -pi/2, n_car, d_car)
+        for i in range(n_car):
+            # vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
+            vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1],  -pi/2)
+            vehicle_state_list.append(vehicleState)
+
 
     if task == 4:
         global battle_pos, battle_theta, battle_theta_norm

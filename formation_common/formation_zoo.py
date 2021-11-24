@@ -29,7 +29,7 @@ class FormationType(Enum):
 
 
 
-def gen_formation(center:np.ndarray, theta, n_car:int, d_car:int, formation_type: FormationType):
+def gen_formation(center:np.ndarray, theta, n_car:int, d_car:float, formation_type: FormationType):
     '''
     Params:
         theta: 弧度制.队形朝向
@@ -86,7 +86,7 @@ def formation_capture(target_position,car_num,r):
 
 
 def formation_line(center, theta, n_car, d_car):
-    ''' 直线队形的位置生成，输入为中心点坐标，直线与x轴夹角(范围-pi~pi)，车数，前后车间距
+    ''' 直线队形的位置生成，从左往右。输入为中心点坐标，直线与x轴夹角(范围-pi~pi)，车数，前后车间距
     theta: 弧度制
     '''
     center = np.array(center)
