@@ -183,7 +183,7 @@ class PurePursuit():
         index = np.where(np.abs(min_distance - distance)< 0.05)
         index = index[0][-1]
         if min_distance > 1:
-            rospy.logwarn('too far from road'+ str(min_distance))
+            rospy.logwarn('pp too far from road. Distance: '+ str(min_distance))
         return index, min_distance
 
     def get_preview_roadpoint(self, local_traj_xy, id_current, preview_distance, posture):
