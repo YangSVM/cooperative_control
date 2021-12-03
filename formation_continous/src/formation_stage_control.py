@@ -28,6 +28,8 @@ class FormationStage():
         # self.initial()
         # 队形变换阶段，调整避免冲突。delta_s_remain越多，速度提升越快
         self.ddelta_s=[]
+        self.v= TARGET_SPEED
+        self.priority = []     # 强制执行的通行次序
     
     @classmethod
     def from_individual(cls, individuals:List[np.ndarray], formation_begin_s, formation_types, ds_trans, matches=[]):
@@ -48,7 +50,7 @@ class FormationStage():
         
         # if center_line.shape[0] ==14:
         if isPlot:
-            plt.clf()
+            # plt.clf()
             plt.axis('equal')
 
             plt.plot(center_line[:,0], center_line[:,1],'g*-')
@@ -74,6 +76,13 @@ class FormationStage():
         stage = judge_formation_stage([s_leader], self.formation_begin_s, self.ds_trans)[0]
         return stage
 
+    def get_end_position(self):
+        n_csps = len(self.individual_csps)
+        formation_np = np.ones([n_csps, 2])
+        for i in range(n_csps):
+            s = self.individual_csps[i].s[-1] - 0.1
+            formation_np[i, :] = self.individual_csps[i].calc_position(s)
+        return formation_np
 
 
 if __name__ == '__main__':

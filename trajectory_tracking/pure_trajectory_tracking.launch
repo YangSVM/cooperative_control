@@ -1,0 +1,13 @@
+<launch>
+<arg name='host5' value="5" />
+  <group ns="car5">
+
+    <!-- <node pkg="gnss_gpchc_driver" name="gnssrtk_node" type="gnssrtk_node_right"> </node> -->
+    <rosparam param="roadMapPath"> "/home/neousys/catkin_yyb/src/trajectory_tracking/routes/scene_7_vel_2_0.txt" </rosparam>
+        <node pkg="trajectory_tracking" name="pure_pursuit_keyboard" type="pure_pursuit_keyboard.py" args="$(arg host5)"> </node>
+
+    <include file="$(find pix_driver)/launch/pix_driver_write.launch"> </include>
+
+  </group>
+</launch>
+

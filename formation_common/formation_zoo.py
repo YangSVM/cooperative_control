@@ -26,6 +26,7 @@ class FormationType(Enum):
     DoubleLine=4
     Point=5
     Vertical=6
+    Arbitrary=7
 
 
 
@@ -42,6 +43,8 @@ def gen_formation(center:np.ndarray, theta, n_car:int, d_car:float, formation_ty
         pos_formation = formation_point(center, n_car)
     elif formation_type == FormationType.Vertical:
         pos_formation = formation_line(center, theta-pi/2, n_car, d_car)
+    elif formation_type == FormationType.Arbitrary:
+        pos_formation = FormationType.Arbitrary
     else:
         assert False, print('invalid input formation_type')
     return pos_formation
@@ -74,12 +77,18 @@ def relative_position(i,N_l,L_s):
     return [xi,yi]
 
 
-def formation_capture(target_position,car_num,r):
+def formation_capture(target_position,n_car,r, d_theta=0, thetas=[]):
     target_x,target_y=[],[]
-    theta=2*pi/car_num
-    for i in range(car_num):
-        target_x.append(target_position[0]+r*math.cos(i*theta))
-        target_y.append(target_position[1]+r*math.sin(i*theta))
+    theta=2*pi/n_car
+
+    if len(thetas)==0:
+        thetas = [i*theta + d_theta for i in range(n_car)]
+
+    if not isinstance(r, list):
+        r = [r for i in range(n_car)]
+    for i in range(n_car):
+        target_x.append(target_position[0]+r[i]*math.cos(thetas[i]))
+        target_y.append(target_position[1]+r[i]*math.sin(thetas[i]))
     
     res = np.array([target_x, target_y]).T
     return res

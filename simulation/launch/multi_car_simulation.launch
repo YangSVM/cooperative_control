@@ -25,14 +25,17 @@
   </group>
 
 
-  <!-- <group ns="car6">
+  <group ns="car6">
     <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
-  </group> -->
+  </group>
 
 
-  <!-- <group ns="car7">
+  <group ns="car7">
     <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py" > </node>
-  </group> -->
+  </group>
 
+  <group ns="car8">
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py" > </node>
+  </group>
   
 </launch>

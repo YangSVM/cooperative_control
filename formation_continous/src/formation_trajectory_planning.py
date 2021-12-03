@@ -6,6 +6,8 @@ v 1.0
 """
 from enum import Enum
 from typing import List, Tuple
+
+from matplotlib.pyplot import streamplot
 from formation_common.cubic_spline_planner import Spline2D
 import time
 
@@ -16,8 +18,7 @@ from formation_common.formation_zoo import *
 from formation_continous.src.load_task_points import search
 from ros_interface import  ROSInterface, MATrajPlanningBase
 
-from formation_common.global_planning import generate_route_with_formation, ds_trans_init
-from formation_common.formation_core import assgin_traj, judge_formation_end, judge_formation_stage, Assign
+from formation_common.formation_core import assgin_traj, judge_formation_end,  Assign
 from trajectory_planning import trajectory_planning, FrenetPath
 from geometry_msgs.msg import Pose
 from formation_common.config_formation_continous import TARGET_SPEED
@@ -76,7 +77,7 @@ class FormationTrajPlanning(MATrajPlanningBase):
         self.isInit = False         # 是否已经初始化。
         self.isSeqPassingInit = False
         self.cp_seq_pass = np.array([0,0]) 
-        self.passing_order = [-1 for i in range(self.n_car)]
+        self.priority = [-1 for i in range(self.n_car)]
 
     def initial(self, pose_states: List[Pose]):
         '''给每辆车分配一条 最近的 轨迹
@@ -88,7 +89,7 @@ class FormationTrajPlanning(MATrajPlanningBase):
         csp_poses = csp_poses.reshape([-1,2])
         car_poses = np.array([[pose.position.x, pose.position.y] for pose in pose_states])
         car_poses = car_poses.reshape([-1,2])
-        if self.fs.formation_types[0] == FormationType.Vertical:
+        if self.fs.formation_types[0] in [FormationType.Vertical]:
             _, matches=Assign(csp_poses, car_poses)              # 直接按照初始位置分：不鲁棒。车辆可能靠前导致失败.仅纵队时使用
         else:
             matches = assgin_traj(car_poses, self.fs.individual_csps)      # 按照横向位置分
@@ -97,6 +98,9 @@ class FormationTrajPlanning(MATrajPlanningBase):
         # matches更改
         for i_stage in range(1, len(self.fs.matches)):
             self.fs.matches[i_stage, :] = self.fs.matches[i_stage ,matches]
+        
+        if len(self.fs.priority) >0:
+            self.fs.priority = self.fs.priority[matches]
 
         if len(self.fs.ddelta_s) >0:
             self.fs.ddelta_s = [self.fs.ddelta_s [i] for i in matches]
@@ -185,7 +189,10 @@ class FormationTrajPlanning(MATrajPlanningBase):
         pos_leader = poses[self.leader_id, :]
         yaw = self.fs.individual_csps[self.leader_id].calc_yaw(s_leader)
 
-        formation_np = gen_formation(pos_leader, yaw, self.n_car, self.d_car, self.formation_type_t)
+        if self.formation_type_t == FormationType.Arbitrary:
+            formation_np = self.fs.get_end_position()
+        else:
+            formation_np = gen_formation(pos_leader, yaw, self.n_car, self.d_car, self.formation_type_t)
         formation_np, _= Assign(poses, formation_np)
 
         # 比例控制
@@ -196,9 +203,10 @@ class FormationTrajPlanning(MATrajPlanningBase):
         dt = 5            # 下一次轨迹规划完成时，能够调整好队形
         d_v  =  delta_d* np.sign(direction) / dt
         # 20% 以内的加减速
-        d_v[d_v>DV_RATIO*TARGET_SPEED] = DV_RATIO*TARGET_SPEED
-        d_v[d_v<-DV_RATIO*TARGET_SPEED] = -DV_RATIO*TARGET_SPEED
-        v = TARGET_SPEED +d_v
+        v_target = self.fs.v
+        d_v[d_v>DV_RATIO*v_target] = DV_RATIO*v_target
+        d_v[d_v<-DV_RATIO*v_target] = -DV_RATIO*v_target
+        v = v_target +d_v
 
         v_str = ['{:.2f}'.format(vi) for vi in v]
         print('!!![Stable]: v: ', v_str)
@@ -217,7 +225,10 @@ class FormationTrajPlanning(MATrajPlanningBase):
         pos_leader =self.fs.individual_csps[self.leader_id].calc_position(s_target)
         yaw = self.fs.individual_csps[self.leader_id].calc_yaw(s_target)
 
-        formation_np = gen_formation(pos_leader, yaw, self.n_car, self.d_car, self.formation_type_t)
+        if self.formation_type_t == FormationType.Arbitrary:
+            formation_np = self.fs.get_end_position()
+        else:
+            formation_np = gen_formation(pos_leader, yaw, self.n_car, self.d_car, self.formation_type_t)
         # formation_np, _, _ = Assign(poses, formation_np)                        # 这样写会导致编号动态变化。
         formation_np = formation_np[self.fs.matches[i_stage, :], :]
         
@@ -231,38 +242,59 @@ class FormationTrajPlanning(MATrajPlanningBase):
 
 
         # leader控制为常速.
-        s0 = s_remain[self.leader_id]
+        # s0 = s_remain[self.leader_id]
+        s0 = min(s_remain)
         delta_s_remain = np.array([s - s0  for s in s_remain])
 
-        # 增加调整参数: 
-        ddelta_s=self.fs.ddelta_s
+        # 增加调整参数:     
+        ddelta_s = np.array(self.fs.ddelta_s)
+
+
+        s0 = min(s_remain)
+        delta_s_remain = np.array([s - s0  for s in s_remain])
+
         if self.fs.formation_types[i_stage] == FormationType.Line:
             # 只在拐弯冲突中使用，此时等价于要变换的队形是横队
             if len(ddelta_s)>0:
+                
+                # 增加功能，如果前一辆车已经到达终点，无需继续减速
+                s_remain = np.array(s_remain)
+                b_car = s_remain<1
+                ddelta_s_leader = np.max(ddelta_s)
+                ddelta_s[b_car] = -1000
+                i_car = np.argmax(ddelta_s)         # 此车不需要进行减速
+        
                 for i in range(self.n_car):
-                    delta_s_remain[i] += ddelta_s[i]
+                    if i == i_car:
+                        delta_s_remain[i] += ddelta_s_leader
+                    else:
+                        delta_s_remain[i] += ddelta_s[i]
 
 
         # 计算直接距离
-        delta_vec = formation_np - poses[..., :2]
-        delta_d_norm = np.linalg.norm(delta_vec, axis=1)
-        direction = (yaw_vec * delta_vec).sum(axis=1)            # 点积判断速度方向
+        # delta_vec = formation_np - poses[..., :2]
+        # delta_d_norm = np.linalg.norm(delta_vec, axis=1)
+        # direction = (yaw_vec * delta_vec).sum(axis=1)            # 点积判断速度方向
 
 
         # 前馈控制 - 根据距离计算之后的速度
         dt = 3            # 下一次轨迹规划完成时，能够调整好队形
         # d_v  =  delta_d_norm* np.sign(direction) / dt
 
-        d_v  =delta_s_remain/dt
- 
+        d_v = delta_s_remain/dt
+
+
+        v_target = self.fs.v
         # DV_RATIO 以内的加减速
-        d_v[d_v>DV_RATIO*TARGET_SPEED] = DV_RATIO*TARGET_SPEED
-        d_v[d_v<-DV_RATIO*TARGET_SPEED] = -DV_RATIO*TARGET_SPEED
-        v = TARGET_SPEED +d_v
+        d_v[d_v>DV_RATIO*v_target] = DV_RATIO*v_target
+        d_v[d_v<-DV_RATIO*v_target] = -DV_RATIO*v_target
+        v = v_target +d_v
 
         v_str = ['{:.2f}'.format(vi) for vi in v]
         print(10*'-' + 'FormationState: Transition : v: ', v_str)
-        print('detla_s', delta_s_remain)
+        print('delta_s_real: ', ["{0:0.2f}".format(s)  for s in s_remain])
+        print('delta_s:', delta_s_remain)
+        print('delta_s input: ', self.fs.ddelta_s)
         print('v: ', v_str)
 
 
@@ -290,10 +322,12 @@ class FormationTrajPlanning(MATrajPlanningBase):
             pose = np.array([rx, ry]).T
             roadpoints.append(pose)
         
-        # 找距离接近的点中，最早的重合点
+        # 找距离接近的点中
         distance  = cdist(roadpoints[0], roadpoints[1], metric='euclidean')
         idx, _ = np.where(distance< 0.1)
-        ix = np.min(idx)
+        # ix = np.min(idx)            #最早的重合点
+        ix = np.max(idx)            #最晚的重合点
+
 
         t2 = time.time()
         print(t2-t1)
@@ -305,24 +339,28 @@ class FormationTrajPlanning(MATrajPlanningBase):
             pos_formations_frenet[1, i, 0], _ = cartesian2frenet(cp[0], cp[1], csp)
 
         # 通行次序为从右往左
-        passing_order = np.argsort(-car_poses[:, 0])
+        priority = np.argsort(-car_poses[:, 0])
 
-        return cp, pos_formations_frenet, passing_order
+        # 如果给定通行次序，就按照通行次序跑
+        if len(self.fs.priority) >0:
+            priority = np.array(self.fs.priority)
+
+        return cp, pos_formations_frenet, priority
 
     # def sequential_passing(pos_formations, states, global_frenet_csps, pos_formations_frenet):
     def sequential_passing(self, csps: List[Spline2D], poses: np.ndarray):
         ''' 顺序通行
-        '''
+        ''' 
         if self.isSeqPassingInit == False:
             self.isSeqPassingInit = True
-            cp, pos_formations_frenet, passing_order = self.sequential_passing_init(csps, poses)     # collision point
+            cp, pos_formations_frenet, priority = self.sequential_passing_init(csps, poses)     # collision point
             self.cp_seq_pass =cp
             self.pos_formations_frenet_seq_pass = pos_formations_frenet
-            self.passing_order  =passing_order
+            self.priority  =priority
         else:
             cp = self.cp_seq_pass
             pos_formations_frenet = self.pos_formations_frenet_seq_pass
-            passing_order = self.passing_order
+            priority = self.priority
         n_car = self.n_car
 
         
@@ -361,13 +399,20 @@ class FormationTrajPlanning(MATrajPlanningBase):
         #     car2pass = priority
 
         # 计算通行次序：从右往左开        
-        passing_order = passing_order[legal_cars]
-        if len(passing_order)>0:
-            car2pass = passing_order[0]
-            print('seq pass: car ', car2pass, 'starting! ')
-        else:
-            car2pass = -1         # 所有车都已经启动完成
+        # passing_order = passing_order[legal_cars]
+        # if len(passing_order)>0:
+        #     car2pass = passing_order[0]
+        #     print('seq pass: car ', car2pass, 'starting! ')
+        # else:
+        #     car2pass = -1         # 所有车都已经启动完成
 
+        # 计算通行次序：按照priority开      
+        # id_pass = len(legal_cars) - sum(legal_cars)
+        self.priority[~legal_cars] = 100
+        if sum(legal_cars) == 0:
+            car2pass = -1         # 所有车都已经启动完成
+        else:
+            car2pass = np.argmin(self.priority) # 选择优先权最高的(priority值最小的)
 
         # 车辆轨迹控制
         # 阶段小于1的车， 按顺序启动。已经阶大于1的车，匀速前进
@@ -611,6 +656,8 @@ class MAFormationTrajPlanning(MATrajPlanningBase):
         # 按照group_car_dict 进行组装并发送
         for i_group in range(self.n_groups):
             poses_i_group = [poses[i_car] for i_car in self.group_car_dict[i_group]]
+            if i_group>0:
+                obs =[]
             trajs, t_remain = self.ftps[i_group].traj_planning(poses_i_group, obs)
             trajs_group.extend(trajs)
             t_remains.append(t_remain)
@@ -643,4 +690,4 @@ if __name__ == '__main__':
     from load_task_points import search
 
     car_colors, center_lines, formation_begin_ls, formation_type_ls,  ds_trans_ls = search()
-    main4ros(n_car, car_colors, center_lines, formation_begin_ls, formation_type_ls,  ds_trans_ls)
+    main4ros(n_pix, car_colors, center_lines, formation_begin_ls, formation_type_ls,  ds_trans_ls)

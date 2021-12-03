@@ -4,6 +4,7 @@
 '''
 from math import e
 import copy
+from operator import ipow
 import time
 from typing import List, Tuple
 
@@ -14,6 +15,8 @@ from formation_common.config_formation_continous import *
 from formation_common.cubic_spline_planner import Spline2D, cartesian2frenet, spline_expand
 import matplotlib.pyplot as plt
 from formation_common.formation_core import Assign, FormationState, judge_formation_stage
+import dubins
+from formation_common.utils import  gen_line, gen_arc
 
 
 '''
@@ -44,6 +47,8 @@ n_car: int, d_car: float =2.5, input_type: int=0, ds_trans=[])-> Tuple[Spline2D,
     if input_type ==0:
         formation_begin_s = formation_input
         for i, s in enumerate(formation_input):
+            if s>global_csp.s[-1]:
+                print('error: global planning used ')
             formation_begin_pos[i, 0], formation_begin_pos[i, 1] = global_csp.calc_position(s)
             formation_begin_pos[i, 2] = global_csp.calc_yaw(s)
     elif input_type==1:
@@ -101,8 +106,8 @@ n_car: int, d_car: float =2.5, input_type: int=0, ds_trans=[])-> Tuple[Spline2D,
     ind_s_stage = stages[stages>=0]
     n_s = ind_s.shape[0]
     global_ind_pos = np.array([global_csp.calc_position(s) for s in ind_s])
-    # plt.figure(1)
-    # plt.plot(global_ind_pos[:, 0], global_ind_pos[:, 1], 'go')
+    plt.figure(1)
+    plt.plot(global_ind_pos[:, 0], global_ind_pos[:, 1], 'g*')
     global_ind_yaw = np.array([global_csp.calc_yaw(s) for s in ind_s])
     ind_pos = np.zeros([n_s, n_car, 2])
 
@@ -112,11 +117,27 @@ n_car: int, d_car: float =2.5, input_type: int=0, ds_trans=[])-> Tuple[Spline2D,
         # 根据目标分配结果重组局部轨迹
         ind_pos[i, ...] = ind_pos[i, matches[i_stage, :], :]
         
-
+    # [TODO]在ind_pos之间的过渡阶段
+    new_ind_pos = []
+    for i_car in range(n_car):
+        ind_pos_icar = copy.deepcopy(ind_pos[:, i_car, :])
+        i_point = 0
+        for i in range(n_s-1):
+            ds = np.linalg.norm(ind_pos[i+1, i_car, :] - ind_pos[i, i_car, :])
+            i_point += 1
+            if ds >2:
+                begin = np.append(ind_pos[i, i_car, :], global_ind_yaw[i])
+                end = np.append(ind_pos[i+1, i_car, :], global_ind_yaw[i+1])
+                traj = dubins_pf_pro(np.array([begin, end]), len_end_line=0.001)
+                traj_np = np.array(traj)
+                ind_pos_icar = np.insert(ind_pos_icar, i_point, traj_np[:, :2], axis=0)
+                i_point += traj_np.shape[0]
+        new_ind_pos.append(ind_pos_icar)
+    
 
     individual_csps =[]
     for i_car in range(n_car):
-        individual_csp = Spline2D(ind_pos[:, i_car, 0], ind_pos[:, i_car, 1])
+        individual_csp = Spline2D(new_ind_pos[i_car][: , 0], new_ind_pos[i_car][:, 1] )
         individual_csps.append(individual_csp)
     return global_csp,  individual_csps, matches, ind_pos
     
@@ -137,6 +158,43 @@ def plot_csp(csp: Spline2D, plot_style='r*', ds=1):
     # print(x,y)
     plt.plot(x,y, plot_style)
 
+
+def dubins_pf_pro(car_poses, ctrl_points=[], r=r_pix, step_size=0.1, len_end_line = 1):
+    ''' dubin path finding. 默认控制点插在起点和终点之间。
+    Params:
+        car_poses: 2*3. 2： 暂时仅支持起点和终点。3: x,y,yaw
+        step_size: dubins轨迹采样长度
+        len_end_line: 轨迹最末端添加一段直线摆正车身。直线长度。
+    '''
+    if len(ctrl_points)>0:
+        # n_pose_car = car_poses.shape[1]
+        ctrl_points = np.array(ctrl_points).reshape([-1])
+        car_poses = np.concatenate((car_poses[0, :], ctrl_points, car_poses[1, :])).reshape([-1,3])
+    
+    # 最后一步矫正加直线的误差。保证停到终点
+    theta = car_poses[-1, -1]
+    line_vec = np.array([math.cos(theta), math.sin(theta), 0])*len_end_line
+    car_poses[-1, :] = car_poses[-1, :] - line_vec
+
+    trajs = []
+    for i in range(car_poses.shape[0]-1):
+        conf = dubins.shortest_path(car_poses[i, :], car_poses[i+1, :], r)
+        traj, s = conf.sample_many(step_size)
+        # 转圈检测
+        d = np.linalg.norm(car_poses[i+1, :2] - car_poses[i, :2])
+        if s[-1] > 4*d:
+            print('load task points dubins pf pro error!')
+            traj = gen_line(car_poses[i, :], car_poses[i+1, :], dim=3)
+        
+        trajs.extend(traj)
+
+    # 加一段短直线：保证拐弯后车头朝向正确
+    tiny = gen_line(car_poses[-1, :], car_poses[-1, :] + line_vec, ds=0.1, dim=3)
+    trajs.extend(tiny)
+
+    trajs = np.array(trajs)
+
+    return trajs
 
 
 # if __name__ == '__main__':

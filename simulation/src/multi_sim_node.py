@@ -221,10 +221,11 @@ def simulation():
 
     global task
     if task == 0:
+        pix_poses, jc_poses, tp_pos = load_critial_poses(i_pix=0, i_jc=0, i_tp=0)
 
         # pos_line =formation_line([0, -14], pi/2, n_car, d_car)
         # pos_line =formation_line([8, 0], -pi/2, n_car, d_car)
-        pos_line =formation_line([8, 0], 0, n_car, d_car)
+        pos_line =formation_line([6, 0], 0, n_pix, d_car)
         # pos_line = np.zeros([n_car, 3])
 
         # 场景1
@@ -275,7 +276,7 @@ def simulation():
         #     [ 0.309 , -8.951  ,     (90- 359.310 )/180*pi],
         # ])
 
-        for i in range(n_car):
+        for i in range(n_pix):
             if pos_line.shape[1]>2:
                 vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], pos_line[i, 2]) 
             else:
@@ -284,24 +285,32 @@ def simulation():
 
     if task == 1:
 
-        pos_line =formation_line([0, -14], pi/2, n_car, d_car)
+        pos_line =formation_line([0, -14], pi/2, n_pix, d_car)
         # pos_line =formation_line([r*2, -R+2*r + 1], pi/2, n_car, d_car)
         state_map_origin = [2 ,17,-90]    
         # state_map_origin = [2 ,-8,-90]    # fast  test
         # state_map_origin = [-2, 8,-90]  # field test
 
-        for i in range(n_car):
+        for i in range(n_pix):
             # vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
             vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], pi/2)
             vehicle_state_list.append(vehicleState)
-    
+
     if task == 2:   # after search
-        pos_line = formation_line([0, 14], -pi/2, n_car, d_car)
-        for i in range(n_car):
+        pos_line = formation_line([0, 14], -pi/2, n_pix, d_car)
+        for i in range(n_pix):
             # vehicleState = VehicleState(state_map_origin[0]-2*i, state_map_origin[1], state_map_origin[2] *np.pi /180 )
             vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1],  -pi/2)
             vehicle_state_list.append(vehicleState)
 
+    if task ==3:
+        pix_points, jc_poses, tp_pos = load_critial_poses(i_pix=3, i_jc=1,i_tp=1)
+
+        pos_line =formation_line(pix_points[:2], pix_points[2], n_pix, d_car)
+
+        for i in range(n_pix):
+            vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], pix_points[2] )
+            vehicle_state_list.append(vehicleState)
 
     if task == 4:
         global battle_pos, battle_theta, battle_theta_norm
@@ -315,13 +324,32 @@ def simulation():
         else:
             print('attack right')
             d_theta  = - d_theta
-        pos_start = formation_line(pos_start_center+ [-d_pos_x, 0], battle_theta-d_theta, n_car, d_car)
+        pos_start = formation_line(pos_start_center+ [-d_pos_x, 0], battle_theta-d_theta, n_pix, d_car)
 
-        for i in range(n_car):
+        for i in range(n_pix):
             vehicleState = VehicleState(pos_start[i, 0], pos_start[i, 1], math.atan2(2, -1) )
             vehicle_state_list.append(vehicleState)
     
+    if task == 5:
+        pix_points, jc_poses, tp_pos = load_critial_poses(i_pix=3, i_jc=1,i_tp=1)
 
+        pos_line =formation_line(pix_points[:2], pix_points[2], n_pix, d_car)
+
+        for i in range(n_pix):
+            vehicleState = VehicleState(pos_line[i, 0], pos_line[i, 1], pix_points[2] )
+            vehicle_state_list.append(vehicleState)
+
+    # 极创
+    if 1 in color_ids.keys():
+        # jc_poses = [6, 8, -pi/2]
+        vehicleState = VehicleState(jc_poses[0], jc_poses[1], jc_poses[2])
+        vehicle_state_list.append(vehicleState)
+
+    # 运输车
+    if 2 in color_ids.keys():
+        # tp_pos = [-15, 7, -pi/2]
+        vehicleState = VehicleState(tp_pos[0], tp_pos[1], tp_pos[2])
+        vehicle_state_list.append(vehicleState)
 
     for i in range(n_car):
         id = car_ids[i]

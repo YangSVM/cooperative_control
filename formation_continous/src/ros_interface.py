@@ -68,23 +68,23 @@ class ROSInterface():
 
         # 车辆状态
         self.pose_states = [Pose() for i in range(n_car)]               # 国际单位制。弧度
-        self.__gps_flag = [False for i in range(n_car)]                     # 判断每辆车是否返回GNSS信息
+        self.gps_flag = [False for i in range(n_car)]                     # 判断每辆车是否返回GNSS信息
 
         self.rate = rospy.Rate(1)
 
     def sub_gps_states(self, msg, i):
-        self.__gps_flag[i] = True
+        self.gps_flag[i] = True
         self.pose_states[i].position.x = msg.pose.pose.position.x
         self.pose_states[i].position.y = msg.pose.pose.position.y
         # 航向角用z轴转向表示。弧度制
         self.pose_states[i].orientation.z = msg.twist.twist.angular.z/180*pi
 
     def get_pose_states(self):
-        if all([self.__gps_flag[x] for x in self.id_id_list_real] ) == True:
+        if all([self.gps_flag[x] for x in self.id_id_list_real] ) == True:
             return self.pose_states
         else:
             rospy.logwarn('gps info not ready!')
-            print(self.__gps_flag)
+            print(self.gps_flag)
             return None
 
 
@@ -136,7 +136,7 @@ class ROSInterface():
         '''
         '''
         n_car = self.n_car
-        for i_car in range(n_car):
+        for i_car in range(len(csps)):
             # 先转成np, 然后转成traj 发布出去
             x,y,_,_,_= spline_expand(csps[i_car], ds=0.1)
             n = len(x)

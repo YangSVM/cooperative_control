@@ -21,6 +21,13 @@
 #include <iostream>
 #include <fstream> //read write file
 
+/*
+feature:
+	GPYBM 稳定解析；
+	规范打印消息：车辆位姿，GPS状态；
+	异常状态值抛弃：GPS状态固定解或者浮动解时，才发布GPS位置(是否太过严格)
+	坐标系转换：使用经纬度，代码编写的坐标系进行同一坐标转换。
+*/
 
 using namespace std;
 
@@ -539,8 +546,8 @@ int main (int argc, char** argv) {
 	// ros::Publisher read_pub2 = nh.advertise<nav_msgs::Odometry>("navOdometry", 1); 	
 	// ros::Publisher read_pub3 = nh.advertise<sensor_msgs::NavSatFix>("navSatFix", 1); 
 	// ros::Publisher read_pub4 = nh.advertise<sensor_msgs::Imu>("imu/data", 20);	
-	ros::Publisher read_pub_raw = nh.advertise<std_msgs::String>("/car2/gpxxx_raw", 1);	
-	ros::Publisher read_pub_gps = nh.advertise<nav_msgs::Odometry>("/car2/gps", 1);	
+	ros::Publisher read_pub_raw = nh.advertise<std_msgs::String>("/car/gpxxx_raw", 1);	
+	ros::Publisher read_pub_gps = nh.advertise<nav_msgs::Odometry>("/car/gps", 1);	
 
 	//设置串口属性，并打开串口 
 	ser.setPort(port); 
@@ -627,8 +634,10 @@ int main (int argc, char** argv) {
 			//cout<<msg_gpgga.header.stamp<<endl;			
 
 			// read_pub.publish(msg_gpgga);///
+
+			// 筛选GPS信号。44 54 45外的不接受
 			double status = msg_gnssodometry.twist.twist.linear.z;
-			if (abs(status-44)<1e-3 or abs(status-54)<1e-3) {
+			if (abs(status-44)<1e-3 or abs(status-54)<1e-3 or abs(status-45)<1e-3) {
 
 				read_pub_gps.publish(msg_gnssodometry);///			
 				read_pub_raw.publish(raw_msg);

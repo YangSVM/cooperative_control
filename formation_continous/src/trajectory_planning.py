@@ -12,16 +12,13 @@
 """
 
 from typing import List
-import rospy
 import numpy as np
 import copy
 import math
 
 
 from math import pi
-import time
 from formation_common.formation_zoo import *
-from scipy.optimize import linear_sum_assignment
 
 
 from formation_common.polynomials_planner import QuarticPolynomial, CubicPolynomial4LaneChange

@@ -3,7 +3,6 @@
 from operator import sub
 仿真的参考系用的右手系
 '''
-from operator import sub
 import matplotlib.pyplot as plt
 import numpy as np
 import rospy
@@ -30,7 +29,7 @@ is_local_trajectory_ready_list = [False for i in range(n_car)]
 global_trajectory_list = [Trajectory() for i in range(n_car)]
 is_global_trajectory_ready_list = [False for i in range(n_car)]
 
-pose_states =  [Pose() for i in range(n_car)]
+pose_states =  [Pose() for i in range(n_car+1)]
 is_gps_ready_list = [False for i in range(n_car)]
 
 formation_points_traj = Trajectory()
@@ -46,7 +45,16 @@ boundary = np.array([[12.06,19.49],
     [13.49,-10.47],
     [13.70,14.47],
     [12.20,19.50]])
-    
+
+# 前三个为障碍物锥桶，后三个为后方的敌方智能体
+enemy = np.array([[ -7.49,	16.28],
+    [-10.76,	16.55],
+    [-11.86,	13.48],
+    [-7.98,17.21],
+    [-11.36,17.38],
+    [-12.51,14.23]])
+theta_enemy = (-157+90)/180*pi
+
 def trajectory2np(trajectory):
     n_points = len(trajectory.roadpoints)
 
@@ -158,7 +166,8 @@ def visual():
 
         rospy.Subscriber('car'+str(id)+'/global_trajectory', Trajectory, get_global_trajectory, i_car)
         rospy.Subscriber('car'+str(id)+'/gps', Odometry, sub_gps_states, i_car)
-
+    
+    rospy.Subscriber('car'+'/gps', Odometry, sub_gps_states, 6)
     rospy.Subscriber('/temp_goal', Trajectory, get_wp)
 
     rate = rospy.Rate(10)
@@ -170,12 +179,22 @@ def visual():
     wp_y = np.array(wp_y) + origin_shift[1]
 
     n_wp = len(wp_x)
-    
+
+    file_path = '/home/tiecun/catkin_ws/src/MA-L5-THICV/trajectory_tracking/trajectory_tracking/routes/'
+    file_name = 'scene_7_vel_3_0.txt'
+    route = np.loadtxt(file_path+file_name)
+    route_x = route[:, 2]
+    route_y = route[:, 1]
+
     while not rospy.is_shutdown():
         # plot simulation
         plt.clf()
-
-        plt.plot(boundary[:,0], boundary[:,1], 'r-')
+        plt.plot(route_x, route_y, 'k-')
+        plt.plot(boundary[:,0], boundary[:,1], 'r-*')
+        plt.plot(restrict_boundary[:, 0], restrict_boundary[:, 1], 'r-*')
+        # 画出敌方车辆和锥桶
+        for i_agent in range(enemy.shape[0]):
+            draw_car(enemy[i_agent, 0], enemy[i_agent, 1], theta_enemy, 0, 'b')
 
         for i_car in range(n_car):
             # id = car_ids[i_car]
@@ -184,7 +203,7 @@ def visual():
                 vehicle_pose_state = pose_states[i_car]
                 plt.plot(vehicle_pose_state.position.x, vehicle_pose_state.position.y, 'bo')
                 # print('plot car ', id)
-                draw_car(vehicle_pose_state.position.x, vehicle_pose_state.position.y, vehicle_pose_state.orientation.z/180*np.pi, 0)
+                draw_car(vehicle_pose_state.position.x, vehicle_pose_state.position.y, vehicle_pose_state.orientation.z/180*np.pi, 0, 'r')
             
             if  is_preview_point_ready_list[i_car]:
                 previewPoint = preview_point_list[i_car]

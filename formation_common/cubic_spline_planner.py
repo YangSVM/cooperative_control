@@ -180,6 +180,14 @@ class Spline2D:
         yaw = math.atan2(dy, dx)
         return yaw
 
+    def calc_pose(self, s):
+        '''
+        calc pose.
+        '''
+        x,y = self.calc_position(s)
+        yaw = self.calc_yaw(s)
+        return np.array([x,y,yaw])
+
 
 def spline_expand(sp:Spline2D, ds=0.1):
     '''将样条曲线的每隔0.1m展开。返回
@@ -194,7 +202,6 @@ def spline_expand(sp:Spline2D, ds=0.1):
         ryaw.append(sp.calc_yaw(i_s))
         rk.append(sp.calc_curvature(i_s))
     return  rx, ry, ryaw, rk, s
-
 
 def calc_spline_course(x, y, ds=0.1):
     sp = Spline2D(x, y)

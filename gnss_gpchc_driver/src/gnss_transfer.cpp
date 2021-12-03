@@ -83,7 +83,7 @@ int gps_linearize_to_lat_lon(gps_linearize_t *gl, const double xy[2], double ll_
 // 测试与高斯正算相差多少. 采取点0 1 5
 int main(){
 
-    double ll_deg[2] = {40.00670625, 166.32815636};
+    double ll_deg[2] = {40.00670625, 116.32815636};
     // {40.00688261, 166.32829583};
     double test_xy[2] = {40.00688458, 166.32820744};
     gps_linearize_t* gl= new gps_linearize_t();

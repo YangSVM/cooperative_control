@@ -34,39 +34,39 @@ include_directories(
 )
 
 
-add_executable( gnssrtk_node_ori 
-  src/GPS_Subscriber_GPYBM.cpp
-) 
+# add_executable( gnssrtk_node_ori 
+#   src/GPS_Subscriber_GPYBM.cpp
+# ) 
 
 add_executable( gnssrtk_node
   src/main.cpp
 ) 
 
-add_executable( gnssrtk_node_right
-  src/GPS_Subscriber_Right.cpp
-) 
+# add_executable( gnssrtk_node_right
+#   src/GPS_Subscriber_Right.cpp
+# ) 
 
-add_executable( gnss_transfer
-  src/gnss_transfer.cpp
-) 
+# add_executable( gnss_transfer
+#   src/gnss_transfer.cpp
+# ) 
 
 #add_dependencies(gnssrtk_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS}) 
-target_link_libraries( gnssrtk_node_ori 
-  ${catkin_LIBRARIES}
-  udev
-)
+# target_link_libraries( gnssrtk_node_ori 
+#   ${catkin_LIBRARIES}
+#   udev
+# )
 
 target_link_libraries( gnssrtk_node 
   ${catkin_LIBRARIES}
   udev
 )
 
-target_link_libraries( gnssrtk_node_right 
-  ${catkin_LIBRARIES}
-  udev
-)
+# target_link_libraries( gnssrtk_node_right 
+#   ${catkin_LIBRARIES}
+#   udev
+# )
 
-target_link_libraries( gnss_transfer 
-  ${catkin_LIBRARIES}
- udev 
-)
+# target_link_libraries( gnss_transfer 
+#   ${catkin_LIBRARIES}
+#  udev 
+# )

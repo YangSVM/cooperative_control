@@ -40,7 +40,7 @@ class PurePursuit():
         self.preview_point = Point()
 
         # 输入 gnss, 规划的局部避撞轨迹
-        rospy.Subscriber('gps', Odometry, self.compute_cmd)
+        rospy.Subscriber('/car/gps', Odometry, self.compute_cmd)
         # 读取keyboard指令
         rospy.Subscriber('/control_flag', Int16MultiArray, self.get_control_flag)
 
@@ -53,6 +53,7 @@ class PurePursuit():
         self.cmd = Int16MultiArray()
         self.cmd.data = np.zeros([13], dtype=int).tolist()
         self.cmd.data[3], self.cmd.data[8] = 1, 1
+        self.cmd.data[11] = 1       # 4 wheel turning
         self.rate = rospy.Rate(60)
 
         self.contrl_flag = -1
@@ -115,7 +116,7 @@ class PurePursuit():
             self.cmd.data[1] = 0
             return
 
-        preview_distance = 1
+        preview_distance = 2
         # find the preview roadpoint according to preview distance
         id_preview, preview_distance_real = self.get_preview_roadpoint(local_traj_xy, id_current, preview_distance,
                                                                        self.posture)
@@ -133,7 +134,7 @@ class PurePursuit():
         preview_curvature = 2 * delta_y / (preview_distance_real**2)
 
         # 车辆轴距为0.8。前轮转角 angle = L *kappa
-        angle = math.atan(0.8 * preview_curvature) * 180 / np.pi
+        angle = math.atan(0.8/2 * preview_curvature) * 180 / np.pi
 
         if np.abs(angle) > 30:
             angle = np.sign(angle) * 30
@@ -177,8 +178,8 @@ class PurePursuit():
             vel_cmd = min(vel_cmd, v_slow)
 
         # control flag控制
-        if self.contrl_flag == -1:
-            vel_cmd = 0
+        # if self.contrl_flag == -1:
+        #     vel_cmd = 0
 
         self.cmd.data[0] = int(vel_cmd * 36)
 
@@ -199,7 +200,8 @@ class PurePursuit():
         index = np.where(np.abs(min_distance - distance) < 0.05)
         index = index[0][-1]
         if min_distance > 1:
-            rospy.logwarn('too far from road' + str(min_distance))
+            rospy.logwarn('too far from road: ' + str(min_distance))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+            # + '.curent point: '+str(local_traj_xy[index, 0]+' '+str(local_traj_xy[index, 1])
         return index, min_distance
 
     def get_preview_roadpoint(self, local_traj_xy, id_current, preview_distance, posture):
