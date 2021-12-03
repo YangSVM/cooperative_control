@@ -49,7 +49,7 @@ def load_formation_turnning_config(car_colors, s_max):
     if isinstance(s_max, list) and n_group == len(s_max):
         formation_begin_ls =[[0, s_max[i]- pi*r_pix] for i in range(n_group)]
     else:
-        formation_begin_ls =[[0, s_max- pi*r_pix] for i in range(n_group)]
+        formation_begin_ls =[[0, max(0, s_max- pi*r_pix-5)] for i in range(n_group)]
 
     formation_type_ls =[[FormationType.Line, FormationType.Line] for i in range(n_group)]
     ds_trans_ls = [[0, -1] for i in range(n_group)]
@@ -306,7 +306,7 @@ def after_search():
     # ds_trans[-1] = -1
     
     fs = FormationStage.from_global(center_line, n_pix,formation_begin_ls[0], formation_type_ls[0], ds_trans=ds_trans_ls[0])
-    fs.ddelta_s = [-i*2 + n_pix for i in range(n_pix)]
+    fs.ddelta_s = [i*2 - n_pix for i in range(n_pix)]
     car_colors = [[0 for i in range(n_pix)]]
     plot_scenario(csps=fs.individual_csps)
     return car_colors ,[fs]

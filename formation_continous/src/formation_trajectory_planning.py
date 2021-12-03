@@ -292,7 +292,7 @@ class FormationTrajPlanning(MATrajPlanningBase):
 
         v_str = ['{:.2f}'.format(vi) for vi in v]
         print(10*'-' + 'FormationState: Transition : v: ', v_str)
-        print('delta_s_real: ', ["{0:0.2f}".format(s)  for s in s_remain])
+        print('s_remain_real: ', ["{0:0.2f}".format(s)  for s in s_remain])
         print('delta_s:', delta_s_remain)
         print('delta_s input: ', self.fs.ddelta_s)
         print('v: ', v_str)

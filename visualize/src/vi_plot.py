@@ -189,7 +189,7 @@ def visual():
     while not rospy.is_shutdown():
         # plot simulation
         plt.clf()
-        plt.plot(route_x, route_y, 'k-')
+        # plt.plot(route_x, route_y, 'k-')
         plt.plot(boundary[:,0], boundary[:,1], 'r-*')
         plt.plot(restrict_boundary[:, 0], restrict_boundary[:, 1], 'r-*')
         # 画出敌方车辆和锥桶
