@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'\200\001\001',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x11\x64\x61ta_transf.proto\x12\x0b\x64\x61ta_transf\"\xe7\x02\n\rZNTStatusInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x0f\n\x07zntName\x18\x02 \x01(\t\x12\x0f\n\x07zntCate\x18\x03 \x01(\t\x12\x0f\n\x07zntType\x18\x04 \x01(\t\x12\x0c\n\x04size\x18\x05 \x03(\x01\x12\x0f\n\x07quality\x18\x06 \x01(\x01\x12\x0e\n\x06height\x18\x07 \x01(\x01\x12\x0f\n\x07\x66yAngle\x18\x08 \x01(\x01\x12\x0f\n\x07\x66gAngle\x18\t \x01(\x01\x12\x11\n\tvPosition\x18\n \x01(\x01\x12\x11\n\thPosition\x18\x0b \x01(\x01\x12\x13\n\x0bzntPosition\x18\x0c \x03(\x01\x12\x0f\n\x07hxAngle\x18\r \x01(\x01\x12\x0e\n\x06vSpeed\x18\x0e \x01(\x01\x12\x0e\n\x06hSpeed\x18\x0f \x01(\x01\x12\x15\n\rhBaijiaoSpeed\x18\x10 \x01(\x01\x12\x15\n\rvAcceleration\x18\x11 \x01(\x01\x12\x15\n\rhAcceleration\x18\x12 \x01(\x01\x12\x10\n\x08sendTime\x18\x13 \x01(\x03\"=\n\x0c\x42\x61seRespInfo\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\x0b\n\x03msg\x18\x02 \x01(\t\x12\x12\n\nserverTime\x18\x03 \x01(\x03\"\x82\x01\n\rSubscribeInfo\x12\x12\n\nmoduleCode\x18\x01 \x01(\t\x12\x10\n\x08operType\x18\x02 \x01(\t\x12\x12\n\nmoduleHost\x18\x03 \x01(\t\x12\x12\n\nmodulePort\x18\x04 \x01(\x05\x12\x11\n\tdataCodes\x18\x05 \x01(\t\x12\x10\n\x08sendTime\x18\x06 \x01(\x03\"o\n\tRoadPoint\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\t\n\x01x\x18\x02 \x01(\x01\x12\t\n\x01y\x18\x03 \x01(\x01\x12\t\n\x01v\x18\x04 \x01(\x01\x12\t\n\x01\x61\x18\x05 \x01(\x01\x12\x0b\n\x03yaw\x18\x06 \x01(\x01\x12\r\n\x05kappa\x18\x07 \x01(\x01\x12\x0c\n\x04type\x18\x08 \x01(\x05\"W\n\tGuiJiInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\'\n\x07ghGuiJi\x18\x02 \x03(\x0b\x32\x16.data_transf.RoadPoint\x12\x10\n\x08sendTime\x18\x06 \x01(\x03\"u\n\x0cObstacleInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x0c\n\x04type\x18\x03 \x01(\x05\x12\r\n\x05speed\x18\x04 \x01(\x01\x12\x13\n\x0borientation\x18\x05 \x01(\x01\x12\x10\n\x08sendTime\x18\x06 \x01(\x03\"\xb8\x01\n\nPersonInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x13\n\x0b\x64kAttribute\x18\x02 \x01(\t\x12\x12\n\nswPosition\x18\x03 \x03(\x01\x12\r\n\x05ziTai\x18\x04 \x01(\t\x12\x11\n\tchaoXiang\x18\x05 \x01(\x01\x12\x0c\n\x04size\x18\x06 \x03(\x01\x12\r\n\x05speed\x18\x07 \x01(\x01\x12\x11\n\tbingZhong\x18\x08 \x01(\t\x12\x0c\n\x04jkDu\x18\t \x01(\x01\x12\x10\n\x08sendTime\x18\n \x01(\x01\"N\n\x08RoadInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x11\n\tattribute\x18\x02 \x01(\t\x12\x0c\n\x04wzDu\x18\x03 \x01(\x01\x12\x10\n\x08sendTime\x18\x04 \x01(\x01\"\x98\x01\n\tEquipInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x13\n\x0b\x64kAttribute\x18\x02 \x01(\t\x12\x12\n\nswPosition\x18\x03 \x03(\x01\x12\x0c\n\x04size\x18\x04 \x03(\x01\x12\r\n\x05speed\x18\x05 \x01(\x01\x12\x11\n\tchaoXiang\x18\x06 \x01(\x01\x12\x0f\n\x07wzSpeed\x18\x07 \x01(\x01\x12\x10\n\x08sendTime\x18\x08 \x01(\x01\"3\n\tPersonReq\x12&\n\x05\x64\x61tas\x18\x01 \x03(\x0b\x32\x17.data_transf.PersonInfo\"/\n\x07RoadReq\x12$\n\x05\x64\x61tas\x18\x01 \x03(\x0b\x32\x15.data_transf.RoadInfo\"1\n\x08\x45quipReq\x12%\n\x05\x64\x61tas\x18\x01 \x03(\x0b\x32\x16.data_transf.EquipInfo2\x91\x04\n\x11\x44\x61taTransfService\x12\x42\n\x0bGuiJIGuiHua\x12\x16.data_transf.GuiJiInfo\x1a\x19.data_transf.BaseRespInfo\"\x00\x12H\n\rSubscribeData\x12\x1a.data_transf.SubscribeInfo\x1a\x19.data_transf.BaseRespInfo\"\x00\x12K\n\x10ZNTStatusReceive\x12\x1a.data_transf.ZNTStatusInfo\x1a\x19.data_transf.BaseRespInfo\"\x00\x12I\n\x0fObstacleReceive\x12\x19.data_transf.ObstacleInfo\x1a\x19.data_transf.BaseRespInfo\"\x00\x12H\n\x11PersonInfoReceive\x12\x16.data_transf.PersonReq\x1a\x19.data_transf.BaseRespInfo\"\x00\x12\x44\n\x0fRoadInfoReceive\x12\x14.data_transf.RoadReq\x1a\x19.data_transf.BaseRespInfo\"\x00\x12\x46\n\x10\x45quipInfoReceive\x12\x15.data_transf.EquipReq\x1a\x19.data_transf.BaseRespInfo\"\x00\x42\x03\x80\x01\x01\x62\x06proto3'
+  serialized_pb=b'\n\x11\x64\x61ta_transf.proto\x12\x0b\x64\x61ta_transf\"\xe7\x02\n\rZNTStatusInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x0f\n\x07zntName\x18\x02 \x01(\t\x12\x0f\n\x07zntCate\x18\x03 \x01(\t\x12\x0f\n\x07zntType\x18\x04 \x01(\t\x12\x0c\n\x04size\x18\x05 \x03(\x01\x12\x0f\n\x07quality\x18\x06 \x01(\x01\x12\x0e\n\x06height\x18\x07 \x01(\x01\x12\x0f\n\x07\x66yAngle\x18\x08 \x01(\x01\x12\x0f\n\x07\x66gAngle\x18\t \x01(\x01\x12\x11\n\tvPosition\x18\n \x01(\x01\x12\x11\n\thPosition\x18\x0b \x01(\x01\x12\x13\n\x0bzntPosition\x18\x0c \x03(\x01\x12\x0f\n\x07hxAngle\x18\r \x01(\x01\x12\x0e\n\x06vSpeed\x18\x0e \x01(\x01\x12\x0e\n\x06hSpeed\x18\x0f \x01(\x01\x12\x15\n\rhBaijiaoSpeed\x18\x10 \x01(\x01\x12\x15\n\rvAcceleration\x18\x11 \x01(\x01\x12\x15\n\rhAcceleration\x18\x12 \x01(\x01\x12\x10\n\x08sendTime\x18\x13 \x01(\x03\"=\n\x0c\x42\x61seRespInfo\x12\x0c\n\x04\x63ode\x18\x01 \x01(\t\x12\x0b\n\x03msg\x18\x02 \x01(\t\x12\x12\n\nserverTime\x18\x03 \x01(\x03\"\x82\x01\n\rSubscribeInfo\x12\x12\n\nmoduleCode\x18\x01 \x01(\t\x12\x10\n\x08operType\x18\x02 \x01(\t\x12\x12\n\nmoduleHost\x18\x03 \x01(\t\x12\x12\n\nmodulePort\x18\x04 \x01(\x05\x12\x11\n\tdataCodes\x18\x05 \x01(\t\x12\x10\n\x08sendTime\x18\x06 \x01(\x03\"o\n\tRoadPoint\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\t\n\x01x\x18\x02 \x01(\x01\x12\t\n\x01y\x18\x03 \x01(\x01\x12\t\n\x01v\x18\x04 \x01(\x01\x12\t\n\x01\x61\x18\x05 \x01(\x01\x12\x0b\n\x03yaw\x18\x06 \x01(\x01\x12\r\n\x05kappa\x18\x07 \x01(\x01\x12\x0c\n\x04type\x18\x08 \x01(\x05\"W\n\tGuiJiInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\'\n\x07ghGuiJi\x18\x02 \x03(\x0b\x32\x16.data_transf.RoadPoint\x12\x10\n\x08sendTime\x18\x06 \x01(\x03\"u\n\x0cObstacleInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x0c\n\x04type\x18\x03 \x01(\x05\x12\r\n\x05speed\x18\x04 \x01(\x01\x12\x13\n\x0borientation\x18\x05 \x01(\x01\x12\x10\n\x08sendTime\x18\x06 \x01(\x03\"\xb8\x01\n\nPersonInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x13\n\x0b\x64kAttribute\x18\x02 \x01(\t\x12\x12\n\nswPosition\x18\x03 \x03(\x01\x12\r\n\x05ziTai\x18\x04 \x01(\t\x12\x11\n\tchaoXiang\x18\x05 \x01(\x01\x12\x0c\n\x04size\x18\x06 \x03(\x01\x12\r\n\x05speed\x18\x07 \x01(\x01\x12\x11\n\tbingZhong\x18\x08 \x01(\t\x12\x0c\n\x04jkDu\x18\t \x01(\x01\x12\x10\n\x08sendTime\x18\n \x01(\x01\"`\n\x08RoadInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x11\n\tattribute\x18\x02 \x01(\t\x12\x0c\n\x04wzDu\x18\x03 \x01(\x01\x12\x10\n\x08sendTime\x18\x04 \x01(\x01\x12\x10\n\x08position\x18\x06 \x03(\x01\"\x98\x01\n\tEquipInfo\x12\x0f\n\x07zntCode\x18\x01 \x01(\t\x12\x13\n\x0b\x64kAttribute\x18\x02 \x01(\t\x12\x12\n\nswPosition\x18\x03 \x03(\x01\x12\x0c\n\x04size\x18\x04 \x03(\x01\x12\r\n\x05speed\x18\x05 \x01(\x01\x12\x11\n\tchaoXiang\x18\x06 \x01(\x01\x12\x0f\n\x07wzSpeed\x18\x07 \x01(\x01\x12\x10\n\x08sendTime\x18\x08 \x01(\x01\"7\n\x0bObstacleReq\x12(\n\x05\x64\x61tas\x18\x01 \x03(\x0b\x32\x19.data_transf.ObstacleInfo\"3\n\tPersonReq\x12&\n\x05\x64\x61tas\x18\x01 \x03(\x0b\x32\x17.data_transf.PersonInfo\"/\n\x07RoadReq\x12$\n\x05\x64\x61tas\x18\x01 \x03(\x0b\x32\x15.data_transf.RoadInfo\"1\n\x08\x45quipReq\x12%\n\x05\x64\x61tas\x18\x01 \x03(\x0b\x32\x16.data_transf.EquipInfo\"\xe6\x01\n\x0eMultiObstacles\x12.\n\ncar_status\x18\x01 \x03(\x0b\x32\x1a.data_transf.ZNTStatusInfo\x12+\n\tobstacles\x18\x02 \x03(\x0b\x32\x18.data_transf.ObstacleReq\x12\'\n\x07persons\x18\x03 \x03(\x0b\x32\x16.data_transf.PersonReq\x12#\n\x05roads\x18\x04 \x03(\x0b\x32\x14.data_transf.RoadReq\x12)\n\nequipments\x18\x05 \x03(\x0b\x32\x15.data_transf.EquipReq\"\xe3\x01\n\x0bZNTOneFrame\x12.\n\ncar_status\x18\x01 \x01(\x0b\x32\x1a.data_transf.ZNTStatusInfo\x12+\n\tobstacles\x18\x02 \x01(\x0b\x32\x18.data_transf.ObstacleReq\x12\'\n\x07persons\x18\x03 \x01(\x0b\x32\x16.data_transf.PersonReq\x12#\n\x05roads\x18\x04 \x01(\x0b\x32\x14.data_transf.RoadReq\x12)\n\nequipments\x18\x05 \x01(\x0b\x32\x15.data_transf.EquipReq\"5\n\tZNTFrames\x12(\n\x06\x66rames\x18\x01 \x03(\x0b\x32\x18.data_transf.ZNTOneFrame\"5\n\x0bMultiFrames\x12&\n\x06\x66rames\x18\x01 \x03(\x0b\x32\x16.data_transf.ZNTFrames2\x94\x04\n\x11\x44\x61taTransfService\x12\x42\n\x0bGuiJIGuiHua\x12\x16.data_transf.GuiJiInfo\x1a\x19.data_transf.BaseRespInfo\"\x00\x12H\n\rSubscribeData\x12\x1a.data_transf.SubscribeInfo\x1a\x19.data_transf.BaseRespInfo\"\x00\x12K\n\x10ZNTStatusReceive\x12\x1a.data_transf.ZNTStatusInfo\x1a\x19.data_transf.BaseRespInfo\"\x00\x12L\n\x13ObstacleInfoReceive\x12\x18.data_transf.ObstacleReq\x1a\x19.data_transf.BaseRespInfo\"\x00\x12H\n\x11PersonInfoReceive\x12\x16.data_transf.PersonReq\x1a\x19.data_transf.BaseRespInfo\"\x00\x12\x44\n\x0fRoadInfoReceive\x12\x14.data_transf.RoadReq\x1a\x19.data_transf.BaseRespInfo\"\x00\x12\x46\n\x10\x45quipInfoReceive\x12\x15.data_transf.EquipReq\x1a\x19.data_transf.BaseRespInfo\"\x00\x42\x03\x80\x01\x01\x62\x06proto3'
 )
 
 
@@ -621,6 +621,13 @@ _ROADINFO = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='position', full_name='data_transf.RoadInfo.position', index=4,
+      number=6, type=1, cpp_type=5, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -634,7 +641,7 @@ _ROADINFO = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=1100,
-  serialized_end=1178,
+  serialized_end=1196,
 )
 
 
@@ -714,8 +721,40 @@ _EQUIPINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1181,
-  serialized_end=1333,
+  serialized_start=1199,
+  serialized_end=1351,
+)
+
+
+_OBSTACLEREQ = _descriptor.Descriptor(
+  name='ObstacleReq',
+  full_name='data_transf.ObstacleReq',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='datas', full_name='data_transf.ObstacleReq.datas', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1353,
+  serialized_end=1408,
 )
 
 
@@ -746,8 +785,8 @@ _PERSONREQ = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1335,
-  serialized_end=1386,
+  serialized_start=1410,
+  serialized_end=1461,
 )
 
 
@@ -778,8 +817,8 @@ _ROADREQ = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1388,
-  serialized_end=1435,
+  serialized_start=1463,
+  serialized_end=1510,
 )
 
 
@@ -810,14 +849,211 @@ _EQUIPREQ = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1437,
-  serialized_end=1486,
+  serialized_start=1512,
+  serialized_end=1561,
+)
+
+
+_MULTIOBSTACLES = _descriptor.Descriptor(
+  name='MultiObstacles',
+  full_name='data_transf.MultiObstacles',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='car_status', full_name='data_transf.MultiObstacles.car_status', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='obstacles', full_name='data_transf.MultiObstacles.obstacles', index=1,
+      number=2, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='persons', full_name='data_transf.MultiObstacles.persons', index=2,
+      number=3, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='roads', full_name='data_transf.MultiObstacles.roads', index=3,
+      number=4, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='equipments', full_name='data_transf.MultiObstacles.equipments', index=4,
+      number=5, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1564,
+  serialized_end=1794,
+)
+
+
+_ZNTONEFRAME = _descriptor.Descriptor(
+  name='ZNTOneFrame',
+  full_name='data_transf.ZNTOneFrame',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='car_status', full_name='data_transf.ZNTOneFrame.car_status', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='obstacles', full_name='data_transf.ZNTOneFrame.obstacles', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='persons', full_name='data_transf.ZNTOneFrame.persons', index=2,
+      number=3, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='roads', full_name='data_transf.ZNTOneFrame.roads', index=3,
+      number=4, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='equipments', full_name='data_transf.ZNTOneFrame.equipments', index=4,
+      number=5, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1797,
+  serialized_end=2024,
+)
+
+
+_ZNTFRAMES = _descriptor.Descriptor(
+  name='ZNTFrames',
+  full_name='data_transf.ZNTFrames',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='frames', full_name='data_transf.ZNTFrames.frames', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=2026,
+  serialized_end=2079,
+)
+
+
+_MULTIFRAMES = _descriptor.Descriptor(
+  name='MultiFrames',
+  full_name='data_transf.MultiFrames',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='frames', full_name='data_transf.MultiFrames.frames', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=2081,
+  serialized_end=2134,
 )
 
 _GUIJIINFO.fields_by_name['ghGuiJi'].message_type = _ROADPOINT
+_OBSTACLEREQ.fields_by_name['datas'].message_type = _OBSTACLEINFO
 _PERSONREQ.fields_by_name['datas'].message_type = _PERSONINFO
 _ROADREQ.fields_by_name['datas'].message_type = _ROADINFO
 _EQUIPREQ.fields_by_name['datas'].message_type = _EQUIPINFO
+_MULTIOBSTACLES.fields_by_name['car_status'].message_type = _ZNTSTATUSINFO
+_MULTIOBSTACLES.fields_by_name['obstacles'].message_type = _OBSTACLEREQ
+_MULTIOBSTACLES.fields_by_name['persons'].message_type = _PERSONREQ
+_MULTIOBSTACLES.fields_by_name['roads'].message_type = _ROADREQ
+_MULTIOBSTACLES.fields_by_name['equipments'].message_type = _EQUIPREQ
+_ZNTONEFRAME.fields_by_name['car_status'].message_type = _ZNTSTATUSINFO
+_ZNTONEFRAME.fields_by_name['obstacles'].message_type = _OBSTACLEREQ
+_ZNTONEFRAME.fields_by_name['persons'].message_type = _PERSONREQ
+_ZNTONEFRAME.fields_by_name['roads'].message_type = _ROADREQ
+_ZNTONEFRAME.fields_by_name['equipments'].message_type = _EQUIPREQ
+_ZNTFRAMES.fields_by_name['frames'].message_type = _ZNTONEFRAME
+_MULTIFRAMES.fields_by_name['frames'].message_type = _ZNTFRAMES
 DESCRIPTOR.message_types_by_name['ZNTStatusInfo'] = _ZNTSTATUSINFO
 DESCRIPTOR.message_types_by_name['BaseRespInfo'] = _BASERESPINFO
 DESCRIPTOR.message_types_by_name['SubscribeInfo'] = _SUBSCRIBEINFO
@@ -827,9 +1063,14 @@ DESCRIPTOR.message_types_by_name['ObstacleInfo'] = _OBSTACLEINFO
 DESCRIPTOR.message_types_by_name['PersonInfo'] = _PERSONINFO
 DESCRIPTOR.message_types_by_name['RoadInfo'] = _ROADINFO
 DESCRIPTOR.message_types_by_name['EquipInfo'] = _EQUIPINFO
+DESCRIPTOR.message_types_by_name['ObstacleReq'] = _OBSTACLEREQ
 DESCRIPTOR.message_types_by_name['PersonReq'] = _PERSONREQ
 DESCRIPTOR.message_types_by_name['RoadReq'] = _ROADREQ
 DESCRIPTOR.message_types_by_name['EquipReq'] = _EQUIPREQ
+DESCRIPTOR.message_types_by_name['MultiObstacles'] = _MULTIOBSTACLES
+DESCRIPTOR.message_types_by_name['ZNTOneFrame'] = _ZNTONEFRAME
+DESCRIPTOR.message_types_by_name['ZNTFrames'] = _ZNTFRAMES
+DESCRIPTOR.message_types_by_name['MultiFrames'] = _MULTIFRAMES
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 ZNTStatusInfo = _reflection.GeneratedProtocolMessageType('ZNTStatusInfo', (_message.Message,), {
@@ -895,6 +1136,13 @@ EquipInfo = _reflection.GeneratedProtocolMessageType('EquipInfo', (_message.Mess
   })
 _sym_db.RegisterMessage(EquipInfo)
 
+ObstacleReq = _reflection.GeneratedProtocolMessageType('ObstacleReq', (_message.Message,), {
+  'DESCRIPTOR' : _OBSTACLEREQ,
+  '__module__' : 'data_transf_pb2'
+  # @@protoc_insertion_point(class_scope:data_transf.ObstacleReq)
+  })
+_sym_db.RegisterMessage(ObstacleReq)
+
 PersonReq = _reflection.GeneratedProtocolMessageType('PersonReq', (_message.Message,), {
   'DESCRIPTOR' : _PERSONREQ,
   '__module__' : 'data_transf_pb2'
@@ -916,6 +1164,34 @@ EquipReq = _reflection.GeneratedProtocolMessageType('EquipReq', (_message.Messag
   })
 _sym_db.RegisterMessage(EquipReq)
 
+MultiObstacles = _reflection.GeneratedProtocolMessageType('MultiObstacles', (_message.Message,), {
+  'DESCRIPTOR' : _MULTIOBSTACLES,
+  '__module__' : 'data_transf_pb2'
+  # @@protoc_insertion_point(class_scope:data_transf.MultiObstacles)
+  })
+_sym_db.RegisterMessage(MultiObstacles)
+
+ZNTOneFrame = _reflection.GeneratedProtocolMessageType('ZNTOneFrame', (_message.Message,), {
+  'DESCRIPTOR' : _ZNTONEFRAME,
+  '__module__' : 'data_transf_pb2'
+  # @@protoc_insertion_point(class_scope:data_transf.ZNTOneFrame)
+  })
+_sym_db.RegisterMessage(ZNTOneFrame)
+
+ZNTFrames = _reflection.GeneratedProtocolMessageType('ZNTFrames', (_message.Message,), {
+  'DESCRIPTOR' : _ZNTFRAMES,
+  '__module__' : 'data_transf_pb2'
+  # @@protoc_insertion_point(class_scope:data_transf.ZNTFrames)
+  })
+_sym_db.RegisterMessage(ZNTFrames)
+
+MultiFrames = _reflection.GeneratedProtocolMessageType('MultiFrames', (_message.Message,), {
+  'DESCRIPTOR' : _MULTIFRAMES,
+  '__module__' : 'data_transf_pb2'
+  # @@protoc_insertion_point(class_scope:data_transf.MultiFrames)
+  })
+_sym_db.RegisterMessage(MultiFrames)
+
 
 DESCRIPTOR._options = None
 
@@ -926,8 +1202,8 @@ _DATATRANSFSERVICE = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=1489,
-  serialized_end=2018,
+  serialized_start=2137,
+  serialized_end=2669,
   methods=[
   _descriptor.MethodDescriptor(
     name='GuiJIGuiHua',
@@ -960,11 +1236,11 @@ _DATATRANSFSERVICE = _descriptor.ServiceDescriptor(
     create_key=_descriptor._internal_create_key,
   ),
   _descriptor.MethodDescriptor(
-    name='ObstacleReceive',
-    full_name='data_transf.DataTransfService.ObstacleReceive',
+    name='ObstacleInfoReceive',
+    full_name='data_transf.DataTransfService.ObstacleInfoReceive',
     index=3,
     containing_service=None,
-    input_type=_OBSTACLEINFO,
+    input_type=_OBSTACLEREQ,
     output_type=_BASERESPINFO,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,

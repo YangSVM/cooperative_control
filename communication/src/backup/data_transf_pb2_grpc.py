@@ -30,9 +30,9 @@ class DataTransfServiceStub(object):
                 request_serializer=data__transf__pb2.ZNTStatusInfo.SerializeToString,
                 response_deserializer=data__transf__pb2.BaseRespInfo.FromString,
                 )
-        self.ObstacleInfoReceive = channel.unary_unary(
-                '/data_transf.DataTransfService/ObstacleInfoReceive',
-                request_serializer=data__transf__pb2.ObstacleReq.SerializeToString,
+        self.ObstacleReceive = channel.unary_unary(
+                '/data_transf.DataTransfService/ObstacleReceive',
+                request_serializer=data__transf__pb2.ObstacleInfo.SerializeToString,
                 response_deserializer=data__transf__pb2.BaseRespInfo.FromString,
                 )
         self.PersonInfoReceive = channel.unary_unary(
@@ -77,9 +77,8 @@ class DataTransfServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ObstacleInfoReceive(self, request, context):
+    def ObstacleReceive(self, request, context):
         """障碍物信息，订阅障碍物数据的实现该接口
-        update 2021.09.23 
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -124,9 +123,9 @@ def add_DataTransfServiceServicer_to_server(servicer, server):
                     request_deserializer=data__transf__pb2.ZNTStatusInfo.FromString,
                     response_serializer=data__transf__pb2.BaseRespInfo.SerializeToString,
             ),
-            'ObstacleInfoReceive': grpc.unary_unary_rpc_method_handler(
-                    servicer.ObstacleInfoReceive,
-                    request_deserializer=data__transf__pb2.ObstacleReq.FromString,
+            'ObstacleReceive': grpc.unary_unary_rpc_method_handler(
+                    servicer.ObstacleReceive,
+                    request_deserializer=data__transf__pb2.ObstacleInfo.FromString,
                     response_serializer=data__transf__pb2.BaseRespInfo.SerializeToString,
             ),
             'PersonInfoReceive': grpc.unary_unary_rpc_method_handler(
@@ -207,7 +206,7 @@ class DataTransfService(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def ObstacleInfoReceive(request,
+    def ObstacleReceive(request,
             target,
             options=(),
             channel_credentials=None,
@@ -217,8 +216,8 @@ class DataTransfService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/data_transf.DataTransfService/ObstacleInfoReceive',
-            data__transf__pb2.ObstacleReq.SerializeToString,
+        return grpc.experimental.unary_unary(request, target, '/data_transf.DataTransfService/ObstacleReceive',
+            data__transf__pb2.ObstacleInfo.SerializeToString,
             data__transf__pb2.BaseRespInfo.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

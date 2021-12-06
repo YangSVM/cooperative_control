@@ -1,0 +1,6 @@
+<launch>
+  <!-- <param name="roadmap_path" value="$(find gnss_gpchc_driver)/map/roadMap_lzjSouth1.txt" /> -->
+
+  <node pkg="communication" name="gps_server" type="gps_server.py"> </node>
+
+</launch>

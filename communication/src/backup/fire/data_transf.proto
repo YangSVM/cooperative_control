@@ -22,20 +22,7 @@ message ZNTStatusInfo {
 	double hBaijiaoSpeed = 16;
 	double vAcceleration = 17;
 	double hAcceleration = 18;
-	int32  IsFire =19;
-	int32 FireTarget=20;
-	int64 sendTime = 25;
-
-}
-
-//无人机系统数据
-message WRJSysDataInfo{
-	string zntCode = 1;
-	string zntName = 2;
-	string mode =3;
-	double BatteryState =4;
-	int32 arm = 5;
-	string task = 6;
+	int64 sendTime = 19;
 }
 
 //基本的返回消息体
@@ -43,7 +30,6 @@ message BaseRespInfo{
 	string code = 1;
 	string msg = 2;
 	int64 serverTime = 3;
-
 }
 //数据订阅请求结构
 message SubscribeInfo{
@@ -64,27 +50,10 @@ message RoadPoint{
 	double kappa = 7;
 	int32 type =8;
 }
-//障碍物信息请求数据
-//update 2021.09.23 
-message ObstacleReq{
-	repeated ObstacleInfo datas = 1;
-}
 //轨迹规划请求结构
 message GuiJiInfo{
 	string zntCode = 1;
 	repeated RoadPoint ghGuiJi = 2;
-	int64 sendTime = 6;
-}
-//无人机控制命令
-message FltCmdInfo{
-	int64 fltMode =1; //1 : Takeoff起飞命令 2：Land 着陆命令 3：解锁命令 4：无人侦查
-	int64 fltHeight=2; //fltHeight 悬停高度 单位 m
-	int64 fltSpeed=3; //fltSpeed 飞行速度 单位 m/s
-}
-//无人机控制请求结构
-message WRJControlReq{
-	string zntCode = 1;
-	FltCmdInfo fltCmd = 2;
 	int64 sendTime = 6;
 }
 //障碍物消息体
@@ -115,7 +84,7 @@ message RoadInfo{
 	string attribute =2;
 	double wzDu =3;
 	double sendTime =4;
-	repeated double position =5;
+	repeated double position =6; //实时位置（x，y），与杨小车一样
 
 }
 //装备信息
@@ -130,6 +99,11 @@ message EquipInfo{
 	double sendTime =8;
 
 }
+//障碍物信息请求数据
+//update 2021.09.23 
+message ObstacleReq{
+	repeated ObstacleInfo datas = 1;
+}
 //人员信息请求数据
 message PersonReq{
 	repeated PersonInfo datas = 1;
@@ -142,29 +116,38 @@ message RoadReq{
 message EquipReq{
 	repeated EquipInfo datas = 1;
 }
-//获取无人机当前状态
-message WrjStatusReq{
-	string zntCode =1;
-	double sendTime =8;
+
+//多帧信息请求数据
+message MultiObstacles{
+	repeated ZNTStatusInfo car_status = 1;
+	repeated ObstacleReq obstacles = 2;
+	repeated PersonReq persons = 3;
+	repeated RoadReq roads = 4;
+	repeated EquipReq equipments = 5;
 }
-message WrjStatusResp{
-	string code = 1;
-	string msg = 2;
-	int64 serverTime = 3;
-	string status=4;
+
+//单帧信息请求数据
+message ZNTOneFrame{
+	ZNTStatusInfo car_status = 1;
+	ObstacleReq obstacles = 2;
+	PersonReq persons = 3;
+	RoadReq roads = 4;
+	EquipReq equipments = 5;
 }
-//无人机命令控制接口,给界面
-message WrjKongZhiReq{
-	string zntCode =1;
-	double wrjHeight=2;
-	double wrjSpeed=3;
-	double sendTime =8;
+
+//同时间戳多源传感器帧信息请求数据
+message ZNTFrames{
+	repeated ZNTOneFrame frames = 1;
 }
+
+//多帧数据
+message MultiFrames{
+	repeated ZNTFrames frames = 1;
+}
+
+
 // The visualization service definition.
 service DataTransfService {
-
-  //无人机起落控制接口
-  rpc WRJControl (WRJControlReq) returns (BaseRespInfo) {}
 
   // 轨迹规划 协同控制模块调用 数据收发模块转发到智能体
   rpc GuiJIGuiHua (GuiJiInfo) returns (BaseRespInfo) {}
@@ -174,9 +157,6 @@ service DataTransfService {
 
   // 智能体状态接收 订阅智能体状态的模块实现该服务端接口
   rpc ZNTStatusReceive (ZNTStatusInfo) returns (BaseRespInfo) {}
-
-  //// 无人机系统数据
-  rpc WRJSysDataReceive (WRJSysDataInfo) returns (BaseRespInfo) {}
 
   //障碍物信息，订阅障碍物数据的实现该接口
   //update 2021.09.23 
@@ -191,13 +171,4 @@ service DataTransfService {
   //装备信息接收接口，订阅装备数据方实现该接口
   rpc EquipInfoReceive(EquipReq) returns (BaseRespInfo) {}
 
-   //给界面的接口------------------------
-   //无人机状态查询
-   rpc GetWrjStatus(WrjStatusReq) returns (WrjStatusResp) {}
-   //无人机开锁
-   rpc WrjUnLock(WrjKongZhiReq) returns (WrjStatusResp) {}
-   //无人机起飞
-   rpc WrjTakeOff(WrjKongZhiReq) returns (WrjStatusResp) {}
-   //无人机着陆
-   rpc WrjLand(WrjKongZhiReq) returns (WrjStatusResp) {}
 }

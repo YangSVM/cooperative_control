@@ -19,3 +19,6 @@ simulation simulation_pp.launch
 rosrun formation_dec forRealCar.py
 roslaunch simulation multi_car_simulation.launch
 ```
+
+3. IP列表
+   1. 小车4： 192.168.1.88

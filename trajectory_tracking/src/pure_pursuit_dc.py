@@ -11,7 +11,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point
 
 from trajectory_tracking.msg import Trajectory
-
+from math import sin,cos
 
 previewPoint = Point(0,0,0)
 
@@ -67,11 +67,19 @@ class PurePursuit():
         self.gps_msg = msg
         self.posture[0] = (self.gps_msg.pose.pose.position.x)
         self.posture[1] = (self.gps_msg.pose.pose.position.y)
-        self.posture[0] = self.posture[0] + bias[0]
-        self.posture[1] = self.posture[1] + bias[1]
-        self.posture[2] = (self.gps_msg.twist.twist.angular.z) 
+
+        self.posture[2] = (self.gps_msg.twist.twist.angular.z)
+        yaw = self.posture[2]/180*np.pi
+
+
+        new_bias_x=bias[0]*sin(yaw) + bias[1]*cos(yaw)
+        new_bias_y=-bias[0]*cos(yaw) + bias[1]*sin(yaw)
+        self.posture[0] = self.posture[0] + new_bias_x
+        self.posture[1] = self.posture[1] + new_bias_y
+
         self.vel[0] = (self.gps_msg.twist.twist.linear.x)
         self.vel[1] = (self.gps_msg.twist.twist.linear.y)
+
         
         # if abs(self.gps_msg.twist.twist.linear.z - 42)>1e-3:
         #     return

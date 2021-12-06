@@ -13,13 +13,14 @@ import sys
 import math
 from enum import Enum
 from geometry_msgs.msg import Point
-
+from math import sin,cos
 from nav_msgs.msg import Path
 from trajectory_tracking.msg import RoadPoint
 from trajectory_tracking.msg import Trajectory
 
 previewPoint = Point(0, 0, 0)
-
+# 配置参数：GPS安装偏移量
+bias = [0, 0.4]
 
 class PurePursuit():
     def __init__(self, hostname):
@@ -78,9 +79,19 @@ class PurePursuit():
         self.gps_msg = msg
         self.posture[0] = (self.gps_msg.pose.pose.position.x)
         self.posture[1] = (self.gps_msg.pose.pose.position.y)
+
         self.posture[2] = (self.gps_msg.twist.twist.angular.z)
+        yaw = self.posture[2]/180*np.pi
+
+
+        new_bias_x=bias[0]*sin(yaw) + bias[1]*cos(yaw)
+        new_bias_y=-bias[0]*cos(yaw) + bias[1]*sin(yaw)
+        self.posture[0] = self.posture[0] + new_bias_x
+        self.posture[1] = self.posture[1] + new_bias_y
+
         self.vel[0] = (self.gps_msg.twist.twist.linear.x)
         self.vel[1] = (self.gps_msg.twist.twist.linear.y)
+
 
         # if abs(self.gps_msg.twist.twist.linear.z - 42)>1e-3:
         #     return
@@ -111,12 +122,12 @@ class PurePursuit():
         id_current, distance_current = self.get_current_roadpoint(local_traj_xy, self.posture)
 
         # 预瞄点太远直接停车
-        if distance_current > 2:
+        if distance_current > 1:
             self.cmd.data[0] = 0
             self.cmd.data[1] = 0
             return
 
-        preview_distance = 2
+        preview_distance = 0.5
         # find the preview roadpoint according to preview distance
         id_preview, preview_distance_real = self.get_preview_roadpoint(local_traj_xy, id_current, preview_distance,
                                                                        self.posture)
@@ -135,6 +146,10 @@ class PurePursuit():
 
         # 车辆轴距为0.8。前轮转角 angle = L *kappa
         angle = math.atan(0.8/2 * preview_curvature) * 180 / np.pi
+        rospy.logwarn("angle:"+ str(angle))
+
+        #angle = (math.atan(0.8 * preview_curvature) * 180 / np.pi)/2
+        #rospy.logwarn("angle2: " + str(angle))
 
         if np.abs(angle) > 30:
             angle = np.sign(angle) * 30
@@ -199,15 +214,18 @@ class PurePursuit():
 
         index = np.where(np.abs(min_distance - distance) < 0.05)
         index = index[0][-1]
-        if min_distance > 1:
-            rospy.logwarn('too far from road: ' + str(min_distance))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
-            # + '.curent point: '+str(local_traj_xy[index, 0]+' '+str(local_traj_xy[index, 1])
+        if min_distance > 0:
+            rospy.logwarn('too far from road: \t' + str(min_distance) )
+            rospy.logwarn('最近点: \t'+str(local_traj_xy[index, :]))
+            rospy.logwarn('当前位置:\t'+str(position))        
+        
         return index, min_distance
 
     def get_preview_roadpoint(self, local_traj_xy, id_current, preview_distance, posture):
-        position = posture[:2]
+        position = local_traj_xy[id_current,:]#posture[:2]
         # 距离自车距离再增加1m
         distance = np.linalg.norm(local_traj_xy[id_current:, :] - position, axis=1) - preview_distance
+        
         # 距离自车最近点再增加1m
         # s = np.linalg.norm(local_traj_xy[1:, :] - local_traj_xy[:-1, :], axis=1)
         # s = np.cumsum(s)
@@ -227,6 +245,8 @@ class PurePursuit():
     def get_local_trajectory(self):
         self.is_local_trajectory_ready = True
         roadMapPath = rospy.get_param("/car"+str(self.host)+"/roadMapPath")
+        # roadMapPath = rospy.get_param("/roadMapPath")
+
         with open(roadMapPath, "r") as f:
             for line in f.readlines():
                 line = line.strip()
@@ -241,5 +261,6 @@ class PurePursuit():
 if __name__ == '__main__':
     rospy.init_node('pure_pursuit_py', anonymous=True)
     pure_pursuit = PurePursuit(sys.argv[1])
+    # pure_pursuit = PurePursuit()
     pure_pursuit.run()
     # rospy.spin()
