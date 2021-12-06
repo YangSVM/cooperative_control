@@ -1,7 +1,7 @@
 <launch>
   <group ns="car1">
     <!-- <node pkg="gnss_gpchc_driver" name="gnssrtk_node" type="gnssrtk_node_right"> </node> -->
-        <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
+    <node pkg="trajectory_tracking" name="pure_pursuit" type="pure_pursuit.py"> </node>
 
     <include file="$(find pix_driver)/launch/pix_driver_write.launch"> </include>
 

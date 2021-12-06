@@ -1,0 +1,2 @@
+gnss_port:  "/dev/ttyUSB0"
+gnss_Baudrate: 115200

@@ -1,4 +1,6 @@
-
+/*
+高斯解算示例程序。
+*/
 /************.h*************/
 #include <stdint.h>
 #include <stdlib.h>
@@ -85,7 +87,7 @@ int main(){
 
     double ll_deg[2] = {40.00670625, 116.32815636};
     // {40.00688261, 166.32829583};
-    double test_xy[2] = {40.00688458, 166.32820744};
+    double test_xy[2] = {40.00688458, 116.32820744};
     gps_linearize_t* gl= new gps_linearize_t();
 
     gps_linearize_init(gl, ll_deg);

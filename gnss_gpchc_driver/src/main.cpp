@@ -27,6 +27,19 @@ feature:
 	规范打印消息：车辆位姿，GPS状态；
 	异常状态值抛弃：GPS状态固定解或者浮动解时，才发布GPS位置(是否太过严格)
 	坐标系转换：使用经纬度，代码编写的坐标系进行同一坐标转换。
+
+说明：
+	新版驱动。适用于当前工控机。大车和scout上会断句不正常。
+	
+	车辆坐标系：东北天坐标系。yaw正向为正东，逆时针为正。采用正常xy右手系。
+	/car/gps    :nav_msgs::Odometry     gps_msg  
+                gps_msg.pose.pose.position.x                    正东正方向
+                gps_msg.pose.pose.position.y                    正北正方向
+                gps_msg.twist.twist.angular.z                      正东为0，逆时针为正。角度制。
+                gps_msg.twist.twist.linear.x                          东向速度
+                gps_msg.twist.twist.linear.y                          北向速度
+	/car/gpxxx_raw String  打印串口原始输出
+
 */
 
 using namespace std;
@@ -71,10 +84,6 @@ void gps_linearize_init(gps_linearize_t *gl, const double ll_deg[2])
     double b = 6356752;  // R_polar//m
 
     double lat_rad = Rad(ll_deg[0]);
-
-    // this is the best radius approximation, agnostic of direction
-    // we don't use this anymore.
-    //    gl->radius = a*a*b / (Sq(a*cos(lat_rad)) + Sq(b*sin(lat_rad)));
 
     // best radius approximation in ns and ew direction.
     gl->radius_ns = Sq(a*b) / pow((Sq(a*cos(lat_rad))) + Sq(b*sin(lat_rad)), 1.5);
@@ -124,29 +133,6 @@ string numToString (const Type &num)
 	return s;
 }
 
-
-bool coordinateTransfer(double lat,double lon, vector<double> &point)
-{
-    // 根据经纬度转成 X, Y坐标系。使用右手系：x+为正东方，y+为正北方，角度为x+逆时针
-
-    //李兆基零点位置
-    // double lat0 = 39.99738253818907*PI/180;
-    // double lon0 =  116.32848306278056*PI/180;
-    
-    //美院零点位置
-    double lat0 = 39.998907*PI/180;
-    double lon0 =  116.329551*PI/180;
-
-    lat = lat*PI/180;
-    lon = lon*PI/180;
-
-    double R = 6378245;
-
-    point[0] = R *cos(lat0) * (lon-lon0);
-    point[1] = R * (lat - lat0); 
-
-    return 1;
-}
 
 
 void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodometry,sensor_msgs::NavSatFix &msg_navsatfix,string &serial_data, gps_linearize_t* gl)
@@ -384,10 +370,11 @@ void gpggaManager(nmea_msgs::Gpgga &gpgga_msg, nav_msgs::Odometry &msg_gnssodome
 		temp_gpchc.assign(serial_data,separator_pos[12]+1 ,separator_pos[13]-separator_pos[12]-1);
 		lon = stringToNum<double>(temp_gpchc);
 
-		vector<double> pose={0,0};
-		coordinateTransfer(lat, lon, pose);
-		msg_gnssodometry.pose.pose.position.x = pose[0];
-		msg_gnssodometry.pose.pose.position.y = pose[1];
+		double global_xy[2] ={0, 0};
+		double ll_deg[2]= {lat, lon};
+		gps_linearize_to_xy(gl, ll_deg, global_xy);
+		msg_gnssodometry.pose.pose.position.x = global_xy[0] ;
+		msg_gnssodometry.pose.pose.position.y = global_xy[1];
 		ROS_INFO_STREAM("X = " << msg_gnssodometry.pose.pose.position.x);
 		ROS_INFO_STREAM("Y = " << msg_gnssodometry.pose.pose.position.y);
 
@@ -524,7 +511,6 @@ int main (int argc, char** argv) {
 	nh.param("gnss_port",port,string("/dev/ttyUSB0"));
 	nh.param("gnss_Baudrate",Baudrate,115200);
 	nh.param("serial_timeout",time_out,10);
-	nh.param("serial_timeout",time_out,10);
 	nh.param("gpgga_enable",gpgga_enable,true);
 	nh.param("gptra_enable",gptra_enable,false);
 	nh.param("bestxyza_enable",bestxyza_enable,false);
@@ -533,7 +519,7 @@ int main (int argc, char** argv) {
 	nh.param<float>("gptra_freq",gptra_freq,1);
 	nh.param<float>("bestxyza_freq",bestxyza_freq,1);
 
-    double ll_deg[2] = {40.00670625, 116.32815636};
+    double ll_deg[2] = {40.00670625, 116.32815636};				//汽研所坐标圆心
     // {40.00688261, 116.32829583};
     double test_xy[2] = {40.00688458, 116.32820744};
     gps_linearize_t* gl= new gps_linearize_t();

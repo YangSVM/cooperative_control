@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+
+package adm2vis;
+
+
+// The visualization service definition.
+service Visual {
+
+  // Send array-like data to test
+  rpc TestArray (ArrayRequest) returns (ArrayReply) {}
+
+  // Send points for point chart
+  rpc VisPoints (PointsRequest) returns (PointsReply) {}
+
+  // Send line for line chart
+  rpc VisLine (LineRequest) returns (LineReply) {}
+
+  // Send gantt parameters for gantt chart
+  rpc VisGanttParam (GanttParamRequest) returns (GanttReply) {}
+
+  // Send gantt for gantt chart
+  rpc VisGantt (GanttRequest) returns (GanttReply) {}
+
+  // Send WTA for WTA table
+  rpc VisWTA (WTARequest) returns (WTAReply) {}
+}
+
+
+// array-like test data
+message ArrayRequest {
+  repeated double values = 1;
+}
+
+message ArrayReply {
+  string flag = 1;
+}
+
+
+// point chart
+message PointsRequest {
+    message PlanPoint {
+    double duration = 1;
+    double succ_rate = 2;
+    int32 order = 3;              // for command signal, which plan to choose
+  }
+  repeated PlanPoint plans = 1;
+}
+
+message PointsReply {
+  string points_flag = 1;
+}
+
+
+// line chart
+message LineRequest {
+  repeated double hvalues = 1;
+  int32 isStop=2;     //折线图停止标志， 1：折线图停止绘制  0：折线图不停止绘制
+}
+
+message LineReply {
+  string line_flag = 1;
+}
+
+// gantt parameters
+message GanttParamRequest {
+  double total_duration = 1;
+  double init_time = 2;
+}
+
+// gantt chart
+message GanttRequest {
+  message Block {
+    int32 is_ended = 1;             // the last-sent block
+    int32 type = 2;                 // task type
+    string name = 3;                // task name: T1-TN
+    int32 agent_us = 4;
+    repeated int32 agent_enemy = 5; // [-1] for no specific target
+    double start_time = 6;
+    double duration = 7;
+  }
+  repeated Block blocks = 1;
+}
+
+message GanttReply {
+  string gantt_flag = 1;
+}
+
+
+// WTA table, for one-stage
+message WTARequest {
+  message Strategy {
+    string description = 1;         // “决策1：高胜率”、“决策2：均衡”、“决策3：少用时”
+    repeated int32 agent_us = 2;
+    repeated int32 agent_enemy = 3;
+    string attack_pair = 4;         // ID attack pairs, "0103*0202*0301*0403*", 01(us) attack 03(enemy), 02(us) attack 02(enemy), ...
+    repeated int32 agent_us_pre = 5;
+    repeated int32 agent_enemy_pre = 6;
+    string attack_pair_pre = 7;
+    double win_rate = 8;
+    double duration = 9;
+    int32 order = 10;               // for command signal, which strategy to choose
+  }
+  repeated Strategy strategies = 1;
+}
+
+message WTAReply {
+  string wta_flag = 1;
+}

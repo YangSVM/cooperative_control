@@ -1,0 +1,4 @@
+<rosparam command="load" file="$(find gnss_gpchc_driver)/sino_m900.yaml" />
+
+<node pkg="gnss_gpchc_driver" name="gnssrtk_node" type="gnssrtk_node"> </node>
+

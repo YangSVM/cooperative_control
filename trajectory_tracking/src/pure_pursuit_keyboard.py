@@ -121,13 +121,13 @@ class PurePursuit():
         # find the current waypoint according to distance.
         id_current, distance_current = self.get_current_roadpoint(local_traj_xy, self.posture)
 
-        # 预瞄点太远直接停车
+        # 最近点太远直接停车
         if distance_current > 1:
             self.cmd.data[0] = 0
             self.cmd.data[1] = 0
             return
 
-        preview_distance = 0.5
+        preview_distance = 1.5
         # find the preview roadpoint according to preview distance
         id_preview, preview_distance_real = self.get_preview_roadpoint(local_traj_xy, id_current, preview_distance,
                                                                        self.posture)
